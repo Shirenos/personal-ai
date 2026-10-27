@@ -23,15 +23,50 @@ export const PROVIDERS = {
   },
 };
 
+/** Groq-oriented speed/quality presets (also usable as model ids elsewhere). */
+export const MODEL_PRESETS = [
+  {
+    id: 'smart',
+    label: 'Smart · Llama 3.3 70B',
+    provider: 'groq',
+    model: 'llama-3.3-70b-versatile',
+    baseUrl: PROVIDERS.groq.base,
+  },
+  {
+    id: 'fast',
+    label: 'Fast · Llama 3.1 8B Instant',
+    provider: 'groq',
+    model: 'llama-3.1-8b-instant',
+    baseUrl: PROVIDERS.groq.base,
+  },
+  {
+    id: 'gemma',
+    label: 'Fast · Gemma 2 9B',
+    provider: 'groq',
+    model: 'gemma2-9b-it',
+    baseUrl: PROVIDERS.groq.base,
+  },
+  {
+    id: 'or-gemini',
+    label: 'OpenRouter · Gemini 2.0 Flash',
+    provider: 'openrouter',
+    model: 'google/gemini-2.0-flash-001',
+    baseUrl: PROVIDERS.openrouter.base,
+  },
+];
+
 const DEFAULTS = {
   name: 'Шира',
   lang: 'ru',
   provider: 'groq',
   baseUrl: PROVIDERS.groq.base,
-  model: PROVIDERS.groq.model,
+  model: 'llama-3.3-70b-versatile',
+  preset: 'smart',
   apiKey: '',
   tts: false,
-  contextMessages: 40,
+  contextMessages: 24,
+  showLatency: true,
+  maxTokens: 1024,
 };
 
 export function getSettings() {
@@ -40,7 +75,6 @@ export function getSettings() {
 
 export function saveSettings(patch) {
   const next = { ...getSettings(), ...patch };
-  // Never accidentally persist empty string over existing key unless intentional
   save('settings', next);
   return next;
 }
@@ -59,6 +93,16 @@ export function hasApiKey() {
 export function applyProviderDefaults(provider) {
   const p = PROVIDERS[provider] || PROVIDERS.groq;
   return { provider, baseUrl: p.base, model: p.model };
+}
+
+export function applyPreset(presetId) {
+  const p = MODEL_PRESETS.find((x) => x.id === presetId) || MODEL_PRESETS[0];
+  return {
+    preset: p.id,
+    provider: p.provider,
+    baseUrl: p.baseUrl,
+    model: p.model,
+  };
 }
 
 export function removeSettings() {

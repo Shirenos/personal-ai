@@ -47,14 +47,47 @@ export function removeMemory(id) {
   save('memories', getMemories().filter((m) => m.id !== id));
 }
 
-export function memoryBlockForPrompt() {
+const STOP = new Set([
+  'и','в','во','на','по','с','со','к','ко','о','об','от','до','за','из','у','а','но','или','the','a','an','to','of','in','on','for','is','are','be','as','at','it','this','that','with','и','что','как','это','не','да','же','ли','бы','мне','меня','мой','моя','моё','ты','я','он','она','они','мы','you','me','my','your','i',
+]);
+
+function tokens(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^a-zа-яё0-9\s]/gi, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP.has(w));
+}
+
+/** Rank named memories by keyword overlap with the user query; always keep newest as weak fallback. */
+export function selectRelevantMemories(query, { limit = 8 } = {}) {
+  const all = getMemories();
+  if (!all.length) return [];
+  const q = new Set(tokens(query));
+  if (!q.size) return all.slice(0, Math.min(4, limit));
+
+  const scored = all.map((m, idx) => {
+    const mt = tokens(m.text);
+    let score = 0;
+    for (const w of mt) if (q.has(w)) score += 1;
+    // slight recency bias
+    score += Math.max(0, (all.length - idx) * 0.01);
+    return { m, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const hits = scored.filter((x) => x.score >= 1).slice(0, limit).map((x) => x.m);
+  if (hits.length) return hits;
+  return all.slice(0, Math.min(3, limit));
+}
+
+export function memoryBlockForPrompt(query = '') {
   const profile = getProfile().map((p) => `- ${p.text}`).join('\n');
-  const notes = getMemories().slice(0, 40).map((m) => `- ${m.text}`).join('\n');
+  const notes = selectRelevantMemories(query, { limit: 8 }).map((m) => `- ${m.text}`).join('\n');
   return [
-    '## Known profile facts',
+    '## Profile',
     profile || '- (none)',
     '',
-    '## Named memories (user-curated)',
-    notes || '- (none yet)',
+    '## Relevant memories',
+    notes || '- (none)',
   ].join('\n');
 }

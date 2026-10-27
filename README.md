@@ -24,13 +24,18 @@ Most “AI wrappers” are either demos or SaaS. Shira is a **local-first shell*
 | **Voice** | Web Speech API — mic (ru-RU / en-US) + optional TTS for replies |
 | **Settings** | Assistant name, RU/EN UI, provider presets, context window size, API key |
 
-### Recommended free setup (strong model)
+### Recommended free setup
 
 1. Create a key at [console.groq.com/keys](https://console.groq.com/keys)
-2. In Settings keep provider **Groq** and model **`llama-3.3-70b-versatile`**
+2. Pick a preset in Settings:
+   - **Smart** — `llama-3.3-70b-versatile` (default, best quality on Groq)
+   - **Fast** — `llama-3.1-8b-instant` (lowest latency)
+   - **Gemma 2 9B** — another fast Groq option
 3. Paste the key → Save → chat
 
-Also works with **OpenRouter** (e.g. `google/gemini-2.0-flash-001`), **OpenAI**, or any local server (`llama.cpp`, Ollama) that exposes `/v1/chat/completions`.
+Streaming, stop/regenerate, latency (ms / TTFT), relevant-memory injection, and tool actions are on by default.
+
+Also works with **OpenRouter** (e.g. Gemini 2.0 Flash), **OpenAI**, or any local OpenAI-compatible server.
 
 > The API key never leaves your browser storage and is never committed to this repository.
 

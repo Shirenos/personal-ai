@@ -42,7 +42,7 @@ export function openCount() {
 }
 
 export function tasksBlockForPrompt() {
-  const open = getTasks().filter((t) => !t.done).slice(0, 30);
+  const open = getTasks().filter((t) => !t.done).slice(0, 12);
   if (!open.length) return '## Open tasks\n- (none)';
   return '## Open tasks\n' + open.map((t) => `- [${t.id}] ${t.text}`).join('\n');
 }

@@ -1,6 +1,12 @@
 import { setLang, t, getLang } from './i18n.js';
-import { getSettings, saveSettings, clearApiKey, hasApiKey, applyProviderDefaults, PROVIDERS } from './settings.js';
-import { showWelcome, sendMessage, clearHistory } from './chat.js';
+import {
+  getSettings, saveSettings, clearApiKey, hasApiKey,
+  applyProviderDefaults, applyPreset, MODEL_PRESETS,
+} from './settings.js';
+import {
+  showWelcome, sendMessage, clearHistory, stopGeneration,
+  regenerateLast, isStreaming, warmupConnection,
+} from './chat.js';
 import { getTasks, addTask, toggleTask, removeTask, openCount } from './tasks.js';
 import { getMemories, addMemory, removeMemory, getProfile } from './memory.js';
 import { loadSchedule, renderSchedulePanel, shiftDay, setToday, tryLiveRefresh } from './schedule.js';
@@ -24,6 +30,15 @@ function setStatus(kind) {
     dot.className = 'dot ok';
     text.textContent = t('status.ready');
   }
+}
+
+function setStreamingUi(on) {
+  $('btn-stop').hidden = !on;
+  $('btn-send').disabled = false;
+  $('btn-send').textContent = on ? t('chat.stop') : t('chat.send');
+  $('btn-send').classList.toggle('stop-mode', on);
+  $('composer').classList.toggle('busy', on);
+  $('btn-regen').disabled = on;
 }
 
 function openPanel(name) {
@@ -120,13 +135,15 @@ function fillSettingsForm() {
   const s = getSettings();
   $('set-name').value = s.name || 'Шира';
   $('set-lang').value = s.lang || 'ru';
+  $('set-preset').value = s.preset || 'smart';
   $('set-provider').value = s.provider || 'groq';
   $('set-base').value = s.baseUrl || '';
   $('set-model').value = s.model || '';
   $('set-key').value = s.apiKey || '';
   $('set-tts').checked = !!s.tts;
-  const ctx = $('set-ctx');
-  if (ctx) ctx.value = s.contextMessages || 40;
+  $('set-latency').checked = s.showLatency !== false;
+  $('set-ctx').value = s.contextMessages || 24;
+  $('set-maxtok').value = s.maxTokens || 1024;
   $('btn-tts').setAttribute('aria-pressed', s.tts ? 'true' : 'false');
   $('nokey-callout').hidden = hasApiKey();
   setStatus(hasApiKey() ? 'ready' : 'nokey');
@@ -144,6 +161,15 @@ function autosize() {
   ta.style.height = Math.min(160, ta.scrollHeight) + 'px';
 }
 
+const chatHooks = () => ({
+  onTasksChanged: renderTasks,
+  onMemoryChanged: renderMemory,
+  onOpenPanel: openPanel,
+  onCompleteTask: (id) => { toggleTask(id); renderTasks(); },
+  onStatus: setStatus,
+  onStreamingChange: setStreamingUi,
+});
+
 async function boot() {
   const s = getSettings();
   setLang(s.lang || 'ru');
@@ -153,6 +179,8 @@ async function boot() {
   renderTasks();
   renderMemory();
   setStatus(hasApiKey() ? 'ready' : 'nokey');
+  setStreamingUi(false);
+  warmupConnection();
 
   try {
     await loadSchedule();
@@ -161,7 +189,6 @@ async function boot() {
     console.warn(e);
   }
 
-  // Navigation
   document.querySelectorAll('.nav-btn').forEach((btn) => {
     btn.addEventListener('click', () => openPanel(btn.dataset.panel));
   });
@@ -176,41 +203,46 @@ async function boot() {
     $('panel-title').textContent = t('nav.' + (document.querySelector('.panel.active')?.dataset.panel || 'chat'));
     renderSchedulePanel();
     setStatus(hasApiKey() ? 'ready' : 'nokey');
+    if (!isStreaming()) setStreamingUi(false);
   });
 
   $('btn-new-chat').addEventListener('click', () => {
+    stopGeneration();
     clearHistory();
     openPanel('chat');
     showWelcome();
+    setStreamingUi(false);
   });
 
-  // Chat
-  const send = async () => {
+  $('btn-stop').addEventListener('click', () => stopGeneration());
+  $('btn-regen').addEventListener('click', async () => {
+    if (isStreaming()) return;
+    openPanel('chat');
+    await regenerateLast(chatHooks());
+  });
+
+  const sendOrStop = async () => {
+    if (isStreaming()) {
+      stopGeneration();
+      return;
+    }
     const text = $('input').value;
     if (!text.trim()) return;
     $('input').value = '';
     autosize();
-    $('btn-send').disabled = true;
-    await sendMessage(text, {
-      onTasksChanged: renderTasks,
-      onMemoryChanged: renderMemory,
-      onOpenPanel: openPanel,
-      onCompleteTask: (id) => { toggleTask(id); renderTasks(); },
-      onStatus: setStatus,
-    });
-    $('btn-send').disabled = false;
+    await sendMessage(text, chatHooks());
     setStatus(hasApiKey() ? 'ready' : 'nokey');
   };
-  $('btn-send').addEventListener('click', send);
+  $('btn-send').addEventListener('click', sendOrStop);
   $('input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      send();
+      sendOrStop();
     }
+    if (e.key === 'Escape' && isStreaming()) stopGeneration();
   });
   $('input').addEventListener('input', autosize);
 
-  // Voice
   if (!speechSupported()) $('btn-mic').style.opacity = '.35';
   $('btn-mic').addEventListener('click', () => {
     if (isListening()) {
@@ -236,7 +268,6 @@ async function boot() {
     $('set-tts').checked = next;
   });
 
-  // Tasks
   $('task-form').addEventListener('submit', (e) => {
     e.preventDefault();
     addTask($('task-input').value, 'ui');
@@ -244,7 +275,6 @@ async function boot() {
     renderTasks();
   });
 
-  // Memory
   $('memory-form').addEventListener('submit', (e) => {
     e.preventDefault();
     addMemory($('memory-input').value);
@@ -271,7 +301,6 @@ async function boot() {
     }
   });
 
-  // Schedule
   $('btn-sched-prev').addEventListener('click', () => { shiftDay(-1); renderSchedulePanel(); });
   $('btn-sched-next').addEventListener('click', () => { shiftDay(1); renderSchedulePanel(); });
   $('btn-sched-today').addEventListener('click', () => { setToday(); renderSchedulePanel(); });
@@ -284,27 +313,39 @@ async function boot() {
     renderSchedulePanel();
   });
 
-  // Settings
+  $('set-preset').addEventListener('change', () => {
+    const id = $('set-preset').value;
+    if (id === 'custom') return;
+    const defs = applyPreset(id);
+    $('set-provider').value = defs.provider;
+    $('set-base').value = defs.baseUrl;
+    $('set-model').value = defs.model;
+  });
   $('set-provider').addEventListener('change', () => {
     const defs = applyProviderDefaults($('set-provider').value);
     $('set-base').value = defs.baseUrl;
     $('set-model').value = defs.model;
+    $('set-preset').value = 'custom';
   });
   $('settings-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const next = saveSettings({
       name: $('set-name').value.trim() || 'Шира',
       lang: $('set-lang').value,
+      preset: $('set-preset').value,
       provider: $('set-provider').value,
       baseUrl: $('set-base').value.trim(),
       model: $('set-model').value.trim(),
       apiKey: $('set-key').value.trim(),
       tts: $('set-tts').checked,
-      contextMessages: Number($('set-ctx')?.value || 40),
+      showLatency: $('set-latency').checked,
+      contextMessages: Number($('set-ctx')?.value || 24),
+      maxTokens: Number($('set-maxtok')?.value || 1024),
     });
     setLang(next.lang);
     applyBrand();
     fillSettingsForm();
+    warmupConnection();
     alert(t('settings.saved'));
   });
   $('btn-clear-key').addEventListener('click', () => {

@@ -64,6 +64,8 @@
         <button class="icon-btn mobile-only" id="btn-menu" type="button" aria-label="Menu">☰</button>
         <h1 class="topbar-title" id="panel-title" data-i18n="nav.chat">Чат</h1>
         <div class="topbar-actions">
+          <button class="ghost-btn" id="btn-regen" type="button" data-i18n="chat.regen" title="Regenerate">↻</button>
+          <button class="ghost-btn danger" id="btn-stop" type="button" data-i18n="chat.stop" hidden>Stop</button>
           <button class="ghost-btn" id="btn-lang" type="button" title="Language">RU</button>
         </div>
       </header>
@@ -78,7 +80,7 @@
             <button class="icon-btn" id="btn-tts" type="button" title="Speak replies" aria-pressed="false" aria-label="TTS">🔊</button>
             <button class="send-btn" id="btn-send" type="button" data-i18n="chat.send">Отправить</button>
           </div>
-          <p class="hint" data-i18n="chat.hint">Команды: /task … · /remember … · /clear</p>
+          <p class="hint" data-i18n="chat.hint">Команды: /task · /remember · /schedule · /tomorrow · /clear · /help</p>
         </div>
       </section>
 
@@ -156,6 +158,17 @@
           </label>
 
           <label class="field">
+            <span data-i18n="settings.preset">Пресет модели</span>
+            <select id="set-preset">
+              <option value="smart">Smart · Llama 3.3 70B (Groq)</option>
+              <option value="fast">Fast · Llama 3.1 8B Instant (Groq)</option>
+              <option value="gemma">Fast · Gemma 2 9B (Groq)</option>
+              <option value="or-gemini">OpenRouter · Gemini 2.0 Flash</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </label>
+
+          <label class="field">
             <span data-i18n="settings.provider">Провайдер</span>
             <select id="set-provider">
               <option value="groq">Groq (free tier)</option>
@@ -183,7 +196,17 @@
 
           <label class="field">
             <span data-i18n="settings.ctx">Окно контекста (сообщений)</span>
-            <input id="set-ctx" type="number" min="8" max="80" step="1" value="40" />
+            <input id="set-ctx" type="number" min="6" max="60" step="1" value="24" />
+          </label>
+
+          <label class="field">
+            <span data-i18n="settings.maxTokens">Макс. токенов ответа</span>
+            <input id="set-maxtok" type="number" min="256" max="4096" step="64" value="1024" />
+          </label>
+
+          <label class="check">
+            <input id="set-latency" type="checkbox" checked />
+            <span data-i18n="settings.latency">Показывать задержку (ms / TTFT)</span>
           </label>
 
           <label class="check">

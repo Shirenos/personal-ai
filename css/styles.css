@@ -289,3 +289,26 @@ a:hover { color: var(--accent); }
   .composer { grid-template-columns: auto 1fr auto; }
   #btn-tts { display: none; }
 }
+
+.msg-meta {
+  margin-top: .55rem;
+  font-family: var(--mono);
+  font-size: .68rem;
+  color: var(--faint);
+  letter-spacing: .02em;
+}
+.composer.busy {
+  border-color: #3a3a42;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 10px 30px rgba(0,0,0,.35);
+}
+#btn-stop:not([hidden]) {
+  animation: pulseStop 1.2s ease-in-out infinite;
+}
+@keyframes pulseStop {
+  50% { border-color: rgba(255,107,107,.55); color: #ff8a8a; }
+}
+.send-btn.stop-mode {
+  background: #2a1515;
+  color: #ff8a8a;
+  border: 1px solid rgba(255,107,107,.35);
+}

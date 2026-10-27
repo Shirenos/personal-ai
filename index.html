@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Шира — Personal AI Assistant</title>
+  <meta name="description" content="Personal AI assistant for Shiren: chat with memory, tasks, university schedule, and voice. Runs in the browser with your own OpenAI-compatible API key." />
+  <meta name="theme-color" content="#0a0a0b" />
+  <meta property="og:title" content="Шира — Personal AI Assistant" />
+  <meta property="og:description" content="Browser-based personal AI assistant with memory, tasks, schedule and voice." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0a0b'/%3E%3Ccircle cx='32' cy='32' r='14' fill='none' stroke='%23e8e8ea' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='4' fill='%23e8e8ea'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app" class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div>
+          <div class="brand-name" id="brand-name">Шира</div>
+          <div class="brand-sub" data-i18n="brand.sub">Personal AI</div>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Panels">
+        <button class="nav-btn active" data-panel="chat" type="button">
+          <span class="nav-ico" aria-hidden="true">◉</span>
+          <span data-i18n="nav.chat">Чат</span>
+        </button>
+        <button class="nav-btn" data-panel="tasks" type="button">
+          <span class="nav-ico" aria-hidden="true">☑</span>
+          <span data-i18n="nav.tasks">Задачи</span>
+          <span class="badge" id="tasks-badge" hidden>0</span>
+        </button>
+        <button class="nav-btn" data-panel="schedule" type="button">
+          <span class="nav-ico" aria-hidden="true">▦</span>
+          <span data-i18n="nav.schedule">Расписание</span>
+        </button>
+        <button class="nav-btn" data-panel="memory" type="button">
+          <span class="nav-ico" aria-hidden="true">◇</span>
+          <span data-i18n="nav.memory">Память</span>
+        </button>
+        <button class="nav-btn" data-panel="settings" type="button">
+          <span class="nav-ico" aria-hidden="true">⚙</span>
+          <span data-i18n="nav.settings">Настройки</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="ghost-btn" id="btn-new-chat" type="button" data-i18n="chat.new">Новый чат</button>
+        <div class="status-line" id="api-status">
+          <span class="dot" id="api-dot"></span>
+          <span id="api-status-text" data-i18n="status.nokey">Нужен API-ключ</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn mobile-only" id="btn-menu" type="button" aria-label="Menu">☰</button>
+        <h1 class="topbar-title" id="panel-title" data-i18n="nav.chat">Чат</h1>
+        <div class="topbar-actions">
+          <button class="ghost-btn" id="btn-lang" type="button" title="Language">RU</button>
+        </div>
+      </header>
+
+      <!-- CHAT -->
+      <section class="panel active" id="panel-chat" data-panel="chat">
+        <div class="messages" id="messages" role="log" aria-live="polite"></div>
+        <div class="composer-wrap">
+          <div class="composer" id="composer">
+            <button class="icon-btn" id="btn-mic" type="button" title="Voice input" aria-label="Microphone">🎤</button>
+            <textarea id="input" rows="1" data-i18n-placeholder="chat.placeholder" placeholder="Сообщение…  /task купить тетрадь"></textarea>
+            <button class="icon-btn" id="btn-tts" type="button" title="Speak replies" aria-pressed="false" aria-label="TTS">🔊</button>
+            <button class="send-btn" id="btn-send" type="button" data-i18n="chat.send">Отправить</button>
+          </div>
+          <p class="hint" data-i18n="chat.hint">Команды: /task … · /remember … · /clear</p>
+        </div>
+      </section>
+
+      <!-- TASKS -->
+      <section class="panel" id="panel-tasks" data-panel="tasks" hidden>
+        <div class="panel-toolbar">
+          <form id="task-form" class="inline-form">
+            <input id="task-input" type="text" data-i18n-placeholder="tasks.placeholder" placeholder="Новая задача…" maxlength="240" required />
+            <button type="submit" class="send-btn" data-i18n="tasks.add">Добавить</button>
+          </form>
+        </div>
+        <ul class="task-list" id="task-list"></ul>
+        <p class="empty" id="tasks-empty" data-i18n="tasks.empty">Пока нет задач. Добавь здесь или напиши /task в чате.</p>
+      </section>
+
+      <!-- SCHEDULE -->
+      <section class="panel" id="panel-schedule" data-panel="schedule" hidden>
+        <div class="panel-toolbar schedule-toolbar">
+          <div>
+            <div class="eyebrow" data-i18n="schedule.group">Группа 221461 · ТулГУ</div>
+            <div class="meta" id="schedule-meta"></div>
+          </div>
+          <div class="row-gap">
+            <button class="ghost-btn" id="btn-sched-prev" type="button">◀</button>
+            <button class="ghost-btn" id="btn-sched-today" type="button" data-i18n="schedule.today">Сегодня</button>
+            <button class="ghost-btn" id="btn-sched-next" type="button">▶</button>
+            <button class="ghost-btn" id="btn-sched-refresh" type="button" data-i18n="schedule.refresh">Обновить</button>
+          </div>
+        </div>
+        <h2 class="day-title" id="schedule-day-title"></h2>
+        <div id="schedule-list" class="schedule-list"></div>
+        <p class="empty" id="schedule-empty" hidden data-i18n="schedule.empty">На этот день пар нет.</p>
+      </section>
+
+      <!-- MEMORY -->
+      <section class="panel" id="panel-memory" data-panel="memory" hidden>
+        <div class="panel-toolbar">
+          <form id="memory-form" class="inline-form">
+            <input id="memory-input" type="text" data-i18n-placeholder="memory.placeholder" placeholder="Факт о тебе…" maxlength="400" required />
+            <button type="submit" class="send-btn" data-i18n="memory.add">Запомнить</button>
+          </form>
+          <div class="row-gap">
+            <button class="ghost-btn" id="btn-export" type="button" data-i18n="memory.export">Экспорт</button>
+            <label class="ghost-btn file-label">
+              <span data-i18n="memory.import">Импорт</span>
+              <input id="import-file" type="file" accept="application/json,.json" hidden />
+            </label>
+          </div>
+        </div>
+        <div class="memory-block">
+          <h3 data-i18n="memory.profile">Профиль</h3>
+          <ul class="memory-list" id="profile-list"></ul>
+        </div>
+        <div class="memory-block">
+          <h3 data-i18n="memory.named">Заметки</h3>
+          <ul class="memory-list" id="memory-list"></ul>
+          <p class="empty" id="memory-empty" data-i18n="memory.empty">Пока пусто. Добавь факт выше или напиши /remember в чате.</p>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="panel" id="panel-settings" data-panel="settings" hidden>
+        <form id="settings-form" class="settings-form">
+          <label class="field">
+            <span data-i18n="settings.name">Имя ассистента</span>
+            <input id="set-name" type="text" maxlength="40" value="Шира" />
+          </label>
+
+          <label class="field">
+            <span data-i18n="settings.lang">Язык интерфейса</span>
+            <select id="set-lang">
+              <option value="ru">Русский</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span data-i18n="settings.provider">Провайдер</span>
+            <select id="set-provider">
+              <option value="groq">Groq (free tier)</option>
+              <option value="openai">OpenAI</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="custom">Custom / local (llama.cpp)</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span data-i18n="settings.base">Base URL</span>
+            <input id="set-base" type="url" placeholder="https://api.groq.com/openai/v1" autocomplete="off" />
+          </label>
+
+          <label class="field">
+            <span data-i18n="settings.model">Модель</span>
+            <input id="set-model" type="text" placeholder="llama-3.3-70b-versatile" autocomplete="off" />
+          </label>
+
+          <label class="field">
+            <span data-i18n="settings.key">API-ключ</span>
+            <input id="set-key" type="password" placeholder="gsk_… / sk-…" autocomplete="off" />
+            <small data-i18n="settings.keyHint">Хранится только в localStorage этого браузера. Никогда не попадает в репозиторий.</small>
+          </label>
+
+          <label class="field">
+            <span data-i18n="settings.ctx">Окно контекста (сообщений)</span>
+            <input id="set-ctx" type="number" min="8" max="80" step="1" value="40" />
+          </label>
+
+          <label class="check">
+            <input id="set-tts" type="checkbox" />
+            <span data-i18n="settings.tts">Озвучивать ответы (ru-RU)</span>
+          </label>
+
+          <div class="row-gap">
+            <button type="submit" class="send-btn" data-i18n="settings.save">Сохранить</button>
+            <button type="button" class="ghost-btn danger" id="btn-clear-key" data-i18n="settings.clearKey">Удалить ключ</button>
+          </div>
+        </form>
+
+        <div class="callout" id="nokey-callout">
+          <h3 data-i18n="settings.setupTitle">Как подключить ИИ</h3>
+          <ol data-i18n-html="settings.setupSteps">
+            <li>Зарегистрируйся на <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a> — бесплатный ключ за минуту.</li>
+            <li>Скопируй ключ и вставь в поле выше (провайдер Groq уже выбран).</li>
+            <li>Нажми «Сохранить» и напиши что угодно в чат.</li>
+          </ol>
+          <p data-i18n="settings.setupAlt">Также работают OpenAI, OpenRouter и локальный llama.cpp / любой OpenAI-совместимый сервер.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="backdrop" id="backdrop" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

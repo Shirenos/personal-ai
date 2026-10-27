@@ -1,5 +1,5 @@
 import { load, save } from './storage.js';
-import { getSettings, hasApiKey } from './settings.js';
+import { getSettings, hasApiKey, saveSettings, SMART_MODEL, RETIRED_MODEL_MAP, PROVIDERS } from './settings.js';
 import { memoryBlockForPrompt, addMemory } from './memory.js';
 import { tasksBlockForPrompt, addTask, toggleTask } from './tasks.js';
 import { scheduleBlockForPrompt, lessonsFor, getViewDate, setToday, formatDayTitle, shiftDay } from './schedule.js';
@@ -170,6 +170,11 @@ export function applyActions(actions, hooks = {}) {
 
 function formatApiError(status, detail) {
   const d = String(detail || '');
+  if (status === 404 || /model_not_found/i.test(d)) {
+    return getLang() === 'ru'
+      ? 'Модель не найдена (404). Старые Llama на Groq сняты — переключись на Smart (openai/gpt-oss-120b) в Настройках.'
+      : 'Model not found (404). Groq Llama IDs were retired — switch to Smart (openai/gpt-oss-120b) in Settings.';
+  }
   if (status === 401 || status === 403) {
     return getLang() === 'ru'
       ? 'Ключ отклонён (401/403). Проверь API-ключ в Настройках.'
@@ -352,7 +357,7 @@ async function runCompletion(userContent, hooks, { regenerate = false } = {}) {
 
   stopGeneration();
 
-  const s = getSettings();
+  let s = ensureCurrentModel();
   const ctxN = Math.max(6, Math.min(60, Number(s.contextMessages) || 24));
   const prior = getHistory()
     .filter((m) => m.role === 'user' || m.role === 'assistant')
@@ -389,15 +394,47 @@ async function runCompletion(userContent, hooks, { regenerate = false } = {}) {
   };
 
   try {
-    const reply = await streamChatCompletion({
-      baseUrl: s.baseUrl.replace(/\/$/, ''),
-      apiKey: s.apiKey.trim(),
-      model: s.model,
-      messages,
-      maxTokens: Number(s.maxTokens) || 1024,
-      signal: abortCtrl.signal,
-      onDelta,
-    });
+    let usedModel = s.model;
+    let reply;
+    try {
+      reply = await streamChatCompletion({
+        baseUrl: s.baseUrl.replace(/\/$/, ''),
+        apiKey: s.apiKey.trim(),
+        model: usedModel,
+        messages,
+        maxTokens: Number(s.maxTokens) || 1024,
+        signal: abortCtrl.signal,
+        onDelta,
+      });
+    } catch (firstErr) {
+      if (signalAborted(firstErr)) throw firstErr;
+      const canFallback = isModelNotFoundError(firstErr)
+        && usedModel !== SMART_MODEL
+        && (s.provider === 'groq' || String(s.baseUrl || '').includes('api.groq.com'));
+      if (!canFallback) throw firstErr;
+      // Migrate saved settings and retry once with Smart default
+      s = saveSettings({
+        model: SMART_MODEL,
+        preset: 'smart',
+        provider: 'groq',
+        baseUrl: PROVIDERS.groq.base,
+      });
+      usedModel = SMART_MODEL;
+      pending = '';
+      firstTokenAt = null;
+      updateMessageEl(el, getLang() === 'ru'
+        ? '_Модель устарела — переключаюсь на GPT-OSS 120B…_'
+        : '_Retired model — switching to GPT-OSS 120B…_', { streaming: true });
+      reply = await streamChatCompletion({
+        baseUrl: s.baseUrl.replace(/\/$/, ''),
+        apiKey: s.apiKey.trim(),
+        model: usedModel,
+        messages,
+        maxTokens: Number(s.maxTokens) || 1024,
+        signal: abortCtrl.signal,
+        onDelta,
+      });
+    }
 
     if (raf) cancelAnimationFrame(raf);
     const { clean, actions } = extractTool(reply);
@@ -456,6 +493,31 @@ async function runCompletion(userContent, hooks, { regenerate = false } = {}) {
     hooks.onStatus?.('ready');
     hooks.onStreamingChange?.(false);
   }
+}
+
+
+function signalAborted(err) {
+  return err?.name === 'AbortError' || /aborted/i.test(String(err?.message || ''));
+}
+
+function isModelNotFoundError(err) {
+  const msg = String(err?.message || err || '');
+  return /\b404\b/.test(msg) && /model[_ ]?not[_ ]?found|does not exist|model_not_found/i.test(msg)
+    || /model_not_found/i.test(msg);
+}
+
+function ensureCurrentModel() {
+  const s = getSettings();
+  // getSettings already migrates retired ids; belt-and-suspenders
+  if (RETIRED_MODEL_MAP[s.model]) {
+    return saveSettings({
+      model: RETIRED_MODEL_MAP[s.model],
+      preset: RETIRED_MODEL_MAP[s.model] === SMART_MODEL ? 'smart' : 'fast',
+      provider: 'groq',
+      baseUrl: PROVIDERS.groq.base,
+    });
+  }
+  return s;
 }
 
 export async function sendMessage(text, hooks = {}) {

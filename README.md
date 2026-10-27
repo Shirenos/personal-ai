@@ -28,9 +28,9 @@ Most “AI wrappers” are either demos or SaaS. Shira is a **local-first shell*
 
 1. Create a key at [console.groq.com/keys](https://console.groq.com/keys)
 2. Pick a preset in Settings:
-   - **Smart** — `llama-3.3-70b-versatile` (default, best quality on Groq)
-   - **Fast** — `llama-3.1-8b-instant` (lowest latency)
-   - **Gemma 2 9B** — another fast Groq option
+   - **Smart** — `openai/gpt-oss-120b` (default on Groq)
+   - **Fast** — `openai/gpt-oss-20b` (lower latency)
+   - Older Llama free-tier IDs were retired (2026-08-16) and auto-migrate
 3. Paste the key → Save → chat
 
 Streaming, stop/regenerate, latency (ms / TTFT), relevant-memory injection, and tool actions are on by default.

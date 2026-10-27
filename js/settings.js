@@ -1,10 +1,13 @@
 import { load, save, remove } from './storage.js';
 
+export const SMART_MODEL = 'openai/gpt-oss-120b';
+export const FAST_MODEL = 'openai/gpt-oss-20b';
+
 export const PROVIDERS = {
   groq: {
     label: 'Groq',
     base: 'https://api.groq.com/openai/v1',
-    model: 'llama-3.3-70b-versatile',
+    model: SMART_MODEL,
   },
   openai: {
     label: 'OpenAI',
@@ -23,27 +26,32 @@ export const PROVIDERS = {
   },
 };
 
-/** Groq-oriented speed/quality presets (also usable as model ids elsewhere). */
+/** Groq free-tier Llama IDs were retired 2026-08-16 — map them away. */
+export const RETIRED_MODEL_MAP = {
+  'llama-3.3-70b-versatile': SMART_MODEL,
+  'llama-3.1-8b-instant': FAST_MODEL,
+  'llama-3.1-70b-versatile': SMART_MODEL,
+  'llama3-70b-8192': SMART_MODEL,
+  'llama3-8b-8192': FAST_MODEL,
+  'llama-3.2-90b-vision-preview': SMART_MODEL,
+  'gemma2-9b-it': FAST_MODEL,
+  'gemma-7b-it': FAST_MODEL,
+  'mixtral-8x7b-32768': FAST_MODEL,
+};
+
 export const MODEL_PRESETS = [
   {
     id: 'smart',
-    label: 'Smart · Llama 3.3 70B',
+    label: 'Smart · GPT-OSS 120B',
     provider: 'groq',
-    model: 'llama-3.3-70b-versatile',
+    model: SMART_MODEL,
     baseUrl: PROVIDERS.groq.base,
   },
   {
     id: 'fast',
-    label: 'Fast · Llama 3.1 8B Instant',
+    label: 'Fast · GPT-OSS 20B',
     provider: 'groq',
-    model: 'llama-3.1-8b-instant',
-    baseUrl: PROVIDERS.groq.base,
-  },
-  {
-    id: 'gemma',
-    label: 'Fast · Gemma 2 9B',
-    provider: 'groq',
-    model: 'gemma2-9b-it',
+    model: FAST_MODEL,
     baseUrl: PROVIDERS.groq.base,
   },
   {
@@ -60,7 +68,7 @@ const DEFAULTS = {
   lang: 'ru',
   provider: 'groq',
   baseUrl: PROVIDERS.groq.base,
-  model: 'llama-3.3-70b-versatile',
+  model: SMART_MODEL,
   preset: 'smart',
   apiKey: '',
   tts: false,
@@ -69,12 +77,50 @@ const DEFAULTS = {
   maxTokens: 1024,
 };
 
+function migrateSettings(raw) {
+  const s = { ...DEFAULTS, ...(raw && typeof raw === 'object' ? raw : {}) };
+  let changed = false;
+
+  if (RETIRED_MODEL_MAP[s.model]) {
+    const next = RETIRED_MODEL_MAP[s.model];
+    if (next === FAST_MODEL) {
+      s.preset = 'fast';
+      s.model = FAST_MODEL;
+    } else {
+      s.preset = 'smart';
+      s.model = SMART_MODEL;
+    }
+    if (s.provider === 'groq' || !s.provider) {
+      s.provider = 'groq';
+      s.baseUrl = PROVIDERS.groq.base;
+    }
+    changed = true;
+  }
+
+  // Old gemma preset id
+  if (s.preset === 'gemma') {
+    s.preset = 'fast';
+    s.model = FAST_MODEL;
+    s.provider = 'groq';
+    s.baseUrl = PROVIDERS.groq.base;
+    changed = true;
+  }
+
+  // Align preset label with known models
+  if (s.model === SMART_MODEL && s.provider === 'groq') s.preset = s.preset === 'custom' ? 'custom' : 'smart';
+  if (s.model === FAST_MODEL && s.provider === 'groq' && s.preset === 'smart') s.preset = 'fast';
+
+  if (changed) save('settings', s);
+  return s;
+}
+
 export function getSettings() {
-  return { ...DEFAULTS, ...load('settings', {}) };
+  return migrateSettings(load('settings', {}));
 }
 
 export function saveSettings(patch) {
-  const next = { ...getSettings(), ...patch };
+  const next = migrateSettings({ ...getSettings(), ...patch });
+  // migrateSettings may have already saved if retired ids present; always persist patch result
   save('settings', next);
   return next;
 }

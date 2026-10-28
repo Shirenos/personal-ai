@@ -9,7 +9,7 @@ import {
   listSessions, touchSessionTitle,
 } from './sessions.js';
 import { executeToolCalls, formatToolResultsForModel } from './tools-exec.js';
-import { extractTextFromFiles } from './files.js';
+import { attachmentsToPrompt } from './files.js';
 import { isDemoMode, getDemoReply } from './demo.js';
 
 const MAX_AGENT_ROUNDS = 3;
@@ -37,8 +37,9 @@ export function stopGeneration() {
   if (abortCtrl) abortCtrl.abort();
 }
 
-export function setPendingFiles(files) {
-  pendingFiles = files || [];
+/** Pending attachments are already-parsed objects from readAttachments (not File handles). */
+export function setPendingFiles(atts) {
+  pendingFiles = atts || [];
 }
 
 export function getPendingFiles() {
@@ -423,7 +424,8 @@ export async function sendMessage(text, hooks = {}) {
   let userContent = raw;
   if (pendingFiles.length) {
     try {
-      const extracted = await extractTextFromFiles(pendingFiles);
+      // Files were snapshotted on pick (see app.js) — use parsed attachments, not File handles.
+      const extracted = attachmentsToPrompt(pendingFiles);
       if (extracted) userContent = (raw ? raw + '\n\n' : '') + extracted;
     } catch (e) {
       appendMessage('assistant', `${t('err.files')}: ${e.message}`);

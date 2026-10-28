@@ -6,63 +6,116 @@ const MAX_FILES = 4;
 
 export function isSupportedFile(file) {
   const n = file?.name || '';
-  return TEXT_EXT.test(n) || PDF_EXT.test(n) || IMG_EXT.test(n) || (file?.type || '').startsWith('text/');
+  const type = file?.type || '';
+  return (
+    TEXT_EXT.test(n) ||
+    PDF_EXT.test(n) ||
+    IMG_EXT.test(n) ||
+    type.startsWith('text/') ||
+    type.startsWith('image/') ||
+    type === 'application/pdf'
+  );
+}
+
+function isImageFile(file) {
+  const n = file?.name || '';
+  const type = file?.type || '';
+  return type.startsWith('image/') || IMG_EXT.test(n);
+}
+
+function friendlyReadError(err) {
+  const name = err?.name || '';
+  const msg = err?.message || String(err || 'read failed');
+  const notFound =
+    name === 'NotFoundError' ||
+    /could not be found|not found|не найден/i.test(msg);
+  const lang = (document.documentElement.lang || 'ru').toLowerCase().startsWith('en')
+    ? 'en'
+    : 'ru';
+  if (notFound) {
+    return new Error(
+      lang === 'en'
+        ? 'The file is no longer available (gallery temp files often expire on Android). Attach it again.'
+        : 'Файл больше недоступен (временные файлы галереи на Android часто исчезают). Прикрепите ещё раз.'
+    );
+  }
+  return err instanceof Error ? err : new Error(msg);
+}
+
+/** Snapshot file bytes immediately — Android/Yandex gallery URIs can vanish before send. */
+async function snapshotBlob(file) {
+  try {
+    const buf = await file.arrayBuffer();
+    return new Blob([buf], { type: file.type || 'application/octet-stream' });
+  } catch (e) {
+    throw friendlyReadError(e);
+  }
 }
 
 export async function readAttachments(fileList) {
   const files = [...(fileList || [])].slice(0, MAX_FILES);
   const out = [];
   for (const file of files) {
-    if (IMG_EXT.test(file.name) || (file.type || '').startsWith('image/')) {
-      const dataUrl = await readAsDataURL(file);
+    try {
+      if (isImageFile(file)) {
+        const dataUrl = await readAsDataURL(file);
+        out.push({
+          kind: 'image',
+          name: file.name || 'image',
+          size: file.size,
+          mime: file.type || 'image/jpeg',
+          dataUrl,
+          text: '',
+          note: 'Image attached. Vision reply requires a vision-capable model (e.g. OpenRouter).',
+        });
+        continue;
+      }
+      if (PDF_EXT.test(file.name) || file.type === 'application/pdf') {
+        const text = await extractPdfText(file);
+        out.push({
+          kind: 'pdf',
+          name: file.name,
+          size: file.size,
+          text: text.slice(0, MAX_CHARS),
+        });
+        continue;
+      }
+      const text = await readAsText(file);
       out.push({
-        kind: 'image',
+        kind: 'text',
         name: file.name,
         size: file.size,
-        mime: file.type,
-        dataUrl,
-        text: '',
-        note: 'Image attached. Vision reply requires a vision-capable model (e.g. OpenRouter).',
+        text: String(text).slice(0, MAX_CHARS),
       });
-      continue;
+    } catch (e) {
+      throw friendlyReadError(e);
     }
-    if (PDF_EXT.test(file.name) || file.type === 'application/pdf') {
-      const text = await extractPdfText(file);
-      out.push({
-        kind: 'pdf',
-        name: file.name,
-        size: file.size,
-        text: text.slice(0, MAX_CHARS),
-      });
-      continue;
-    }
-    const text = await readAsText(file);
-    out.push({
-      kind: 'text',
-      name: file.name,
-      size: file.size,
-      text: String(text).slice(0, MAX_CHARS),
-    });
   }
   return out;
 }
 
 function readAsText(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result || '');
-    r.onerror = () => reject(r.error || new Error('read failed'));
-    r.readAsText(file);
-  });
+  return snapshotBlob(file).then(
+    (blob) =>
+      new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result || '');
+        r.onerror = () => reject(friendlyReadError(r.error || new Error('read failed')));
+        r.readAsText(blob);
+      })
+  );
 }
 
 function readAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result || '');
-    r.onerror = () => reject(r.error || new Error('read failed'));
-    r.readAsDataURL(file);
-  });
+  return snapshotBlob(file).then(
+    (blob) =>
+      new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result || '');
+        r.onerror = () => reject(friendlyReadError(r.error || new Error('read failed')));
+        r.readAsDataURL(blob);
+      })
+  );
 }
 
 async function extractPdfText(file) {
@@ -76,7 +129,8 @@ async function extractPdfText(file) {
   }
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
-  const buf = await file.arrayBuffer();
+  const blob = await snapshotBlob(file);
+  const buf = await blob.arrayBuffer();
   const doc = await pdfjsLib.getDocument({ data: buf }).promise;
   const pages = Math.min(doc.numPages, 12);
   let text = '';
@@ -113,7 +167,7 @@ export function attachmentsToPrompt(atts) {
   const parts = ['## Attached files'];
   for (const a of atts) {
     if (a.kind === 'image') {
-      parts.push(`### Image: ${a.name}\n(${a.note})`);
+      parts.push(`### Image: ${a.name}\n(${a.note || 'Image attached.'})`);
     } else {
       parts.push(`### ${a.name}\n\`\`\`\n${a.text}\n\`\`\``);
     }

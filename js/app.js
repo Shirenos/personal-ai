@@ -17,7 +17,7 @@ import { getMemories, addMemory, removeMemory, getProfile } from './memory.js';
 import { loadSchedule, renderSchedulePanel, shiftDay, setToday, tryLiveRefresh } from './schedule.js';
 import { startListening, stopListening, isListening, speechSupported, speak, ttsSupported } from './voice.js';
 import { exportAll, importAll } from './storage.js';
-import { isSupportedFile } from './files.js';
+import { isSupportedFile, readAttachments } from './files.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -468,11 +468,18 @@ async function boot() {
   $('input').addEventListener('input', autosize);
 
   $('btn-attach').addEventListener('click', () => $('file-input').click());
-  $('file-input').addEventListener('change', () => {
+  $('file-input').addEventListener('change', async () => {
     const picked = [...($('file-input').files || [])].filter(isSupportedFile).slice(0, 4);
-    setPendingFiles([...(getPendingFiles() || []), ...picked].slice(0, 4));
+    // Clear input immediately; keep File refs only long enough to snapshot bytes.
     $('file-input').value = '';
-    renderAttachBar();
+    if (!picked.length) return;
+    try {
+      const atts = await readAttachments(picked);
+      setPendingFiles([...(getPendingFiles() || []), ...atts].slice(0, 4));
+      renderAttachBar();
+    } catch (e) {
+      toast(`${t('err.files')}: ${e.message || e}`, { error: true });
+    }
   });
 
   $('btn-mic').addEventListener('click', () => {

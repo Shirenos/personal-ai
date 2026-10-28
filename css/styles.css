@@ -295,8 +295,28 @@ a:hover { color: var(--accent); }
   .mobile-only:not([hidden]) { display: inline-flex; }
   .messages { padding: 1rem; }
   .composer {
+    display: grid;
     grid-template-columns: auto auto 1fr auto;
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    grid-template-areas:
+      "text text text text"
+      "att mic . send";
+    align-items: center;
+    gap: .4rem .45rem;
+    padding-bottom: max(.55rem, env(safe-area-inset-bottom, 0));
+  }
+  .composer textarea {
+    grid-area: text;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  #btn-attach { grid-area: att; }
+  #btn-mic { grid-area: mic; }
+  #btn-send {
+    grid-area: send;
+    justify-self: end;
+    white-space: nowrap;
+    padding: .65rem .9rem;
   }
   #btn-tts { display: none !important; }
   .topbar { padding-left: .5rem; padding-right: .5rem; }

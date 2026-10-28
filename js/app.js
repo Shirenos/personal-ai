@@ -1,23 +1,23 @@
-import { setLang, t, getLang, syncDocumentMeta } from './i18n.js';
+import { setLang, t, getLang, syncDocumentMeta } from './i18n.js?v=20261028b';
 import {
   getSettings, saveSettings, clearApiKey, hasApiKey,
   applyProviderDefaults, applyPreset, wipeAllLocalData,
   defaultAssistantName, clampContextMessages, clampMaxTokens,
-} from './settings.js';
+} from './settings.js?v=20261028b';
 import {
   showWelcome, sendMessage, stopGeneration,
   regenerateLast, isStreaming, warmupConnection,
   setPendingFiles, getPendingFiles, getHistory,
-} from './chat.js';
+} from './chat.js?v=20261028b';
 import {
   listSessions, createSession, switchSession, deleteSession, getActiveSessionId,
-} from './sessions.js';
-import { getTasks, addTask, toggleTask, removeTask, openCount } from './tasks.js';
-import { getMemories, addMemory, removeMemory, getProfile } from './memory.js';
-import { loadSchedule, renderSchedulePanel, shiftDay, setToday, tryLiveRefresh } from './schedule.js';
-import { startListening, stopListening, isListening, speechSupported, speak, ttsSupported } from './voice.js';
-import { exportAll, importAll } from './storage.js';
-import { isSupportedFile, readAttachments } from './files.js';
+} from './sessions.js?v=20261028b';
+import { getTasks, addTask, toggleTask, removeTask, openCount } from './tasks.js?v=20261028b';
+import { getMemories, addMemory, removeMemory, getProfile } from './memory.js?v=20261028b';
+import { loadSchedule, renderSchedulePanel, shiftDay, setToday, tryLiveRefresh } from './schedule.js?v=20261028b';
+import { startListening, stopListening, isListening, speechSupported, speak, ttsSupported } from './voice.js?v=20261028b';
+import { exportAll, importAll } from './storage.js?v=20261028b';
+import { isSupportedFile, readAttachments } from './files.js?v=20261028b';
 
 const $ = (id) => document.getElementById(id);
 

@@ -1,4 +1,4 @@
-import { load, save } from './storage.js';
+import { load, save } from './storage.js?v=20261028b';
 
 const PROFILE_DEFAULT = [
   { id: 'p1', text: 'Имя: Shiren (GitHub: Shirenos)' },

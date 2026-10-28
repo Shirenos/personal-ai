@@ -1,7 +1,7 @@
-import { getLang } from './i18n.js';
-import { hasApiKey } from './settings.js';
-import { lessonsFor } from './schedule.js';
-import { listTasks } from './tasks.js';
+import { getLang } from './i18n.js?v=20261028b';
+import { hasApiKey } from './settings.js?v=20261028b';
+import { lessonsFor } from './schedule.js?v=20261028b';
+import { listTasks } from './tasks.js?v=20261028b';
 
 export function isDemoMode() {
   return !hasApiKey();

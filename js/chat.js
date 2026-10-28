@@ -1,16 +1,16 @@
-import { getSettings, RETIRED_MODEL_MAP, SMART_MODEL } from './settings.js';
-import { memoryBlockForPrompt, addMemory } from './memory.js';
-import { addTask, listTasks, toggleTask, removeTask } from './tasks.js';
-import { scheduleBlockForPrompt, lessonsFor, formatDayTitle, setToday } from './schedule.js';
-import { renderMarkdown } from './markdown.js';
-import { t } from './i18n.js';
+import { getSettings, RETIRED_MODEL_MAP, SMART_MODEL } from './settings.js?v=20261028b';
+import { memoryBlockForPrompt, addMemory } from './memory.js?v=20261028b';
+import { addTask, listTasks, toggleTask, removeTask } from './tasks.js?v=20261028b';
+import { scheduleBlockForPrompt, lessonsFor, formatDayTitle, setToday } from './schedule.js?v=20261028b';
+import { renderMarkdown } from './markdown.js?v=20261028b';
+import { t } from './i18n.js?v=20261028b';
 import {
   getActiveSession, saveActiveMessages, clearActiveSession,
   listSessions, touchSessionTitle,
-} from './sessions.js';
-import { executeToolCalls, formatToolResultsForModel } from './tools-exec.js';
-import { attachmentsToPrompt } from './files.js';
-import { isDemoMode, getDemoReply } from './demo.js';
+} from './sessions.js?v=20261028b';
+import { executeToolCalls, formatToolResultsForModel } from './tools-exec.js?v=20261028b';
+import { attachmentsToPrompt } from './files.js?v=20261028b';
+import { isDemoMode, getDemoReply } from './demo.js?v=20261028b';
 
 const MAX_AGENT_ROUNDS = 3;
 let abortCtrl = null;

@@ -14,7 +14,29 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=20261028b" />
+  <style id="critical-composer">
+    @media (max-width: 860px) {
+      #composer.composer {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: .4rem !important;
+      }
+      #composer.composer textarea {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        order: -1 !important;
+      }
+      #composer #btn-tts { display: none !important; }
+      #composer #btn-send {
+        margin-left: auto !important;
+        white-space: nowrap !important;
+      }
+    }
+  </style>
 </head>
 <body>
   <div id="app" class="app">
@@ -288,6 +310,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=20261028b"></script>
 </body>
 </html>

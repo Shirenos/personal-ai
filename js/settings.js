@@ -1,4 +1,4 @@
-import { load, save, remove, PREFIX } from './storage.js';
+import { load, save, remove, PREFIX } from './storage.js?v=20261028b';
 
 export const SMART_MODEL = 'openai/gpt-oss-120b';
 export const FAST_MODEL = 'openai/gpt-oss-20b';

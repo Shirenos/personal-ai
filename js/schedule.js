@@ -1,5 +1,5 @@
-import { t, getLang } from './i18n.js';
-import { getSettings } from './settings.js';
+import { t, getLang } from './i18n.js?v=20261028b';
+import { getSettings } from './settings.js?v=20261028b';
 
 let cache = null;
 let viewDate = null;

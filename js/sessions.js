@@ -1,4 +1,4 @@
-import { load, save } from './storage.js';
+import { load, save } from './storage.js?v=20261028b';
 
 function uid() {
   return 's_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);

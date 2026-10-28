@@ -312,3 +312,157 @@ a:hover { color: var(--accent); }
   color: #ff8a8a;
   border: 1px solid rgba(255,107,107,.35);
 }
+
+/* —— Upgrade: sessions, empty state, onboarding, a11y —— */
+.nav-ico svg { display: block; opacity: .85; }
+.nav-btn { min-height: 44px; }
+.tap, .icon-btn, .ghost-btn, .send-btn, .nav-btn, .session-btn, .suggest-chip {
+  min-height: 44px;
+  min-width: 44px;
+}
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; flex-shrink: 0;
+}
+.icon-btn.disabled, .icon-btn:disabled { opacity: .35; cursor: not-allowed; }
+.icon-btn svg { display: block; }
+
+.sessions-block {
+  display: flex; flex-direction: column; gap: .45rem;
+  flex: 1; min-height: 0; overflow: hidden;
+  padding: 0 .25rem;
+}
+.sessions-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .5rem; color: var(--faint); font-size: .72rem;
+  text-transform: uppercase; letter-spacing: .12em; padding: 0 .4rem;
+}
+.session-list {
+  list-style: none; margin: 0; padding: 0;
+  overflow: auto; display: flex; flex-direction: column; gap: .25rem;
+  flex: 1;
+}
+.session-item {
+  display: flex; align-items: center; gap: .15rem;
+  border-radius: 10px;
+}
+.session-item.active { background: var(--bg-panel); box-shadow: inset 0 0 0 1px var(--line); }
+.session-btn {
+  flex: 1; border: 0; background: transparent; color: var(--muted);
+  text-align: left; padding: .55rem .7rem; border-radius: 10px; cursor: pointer;
+  overflow: hidden;
+}
+.session-btn:hover { color: var(--text); background: var(--bg-hover); }
+.session-title {
+  display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: .88rem;
+}
+.session-del {
+  border: 0; background: transparent; color: var(--faint); cursor: pointer;
+  width: 36px; height: 36px; border-radius: 8px; font-size: 1.1rem;
+}
+.session-del:hover { color: var(--danger); background: rgba(255,107,107,.08); }
+
+.sidebar .nav { flex: 0 0 auto; }
+.sidebar-footer { margin-top: auto; }
+
+.hero-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem;
+  padding: .75rem 1.1rem; margin: .5rem 1rem 0;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(255,255,255,.04), transparent 60%);
+}
+.hero-badge {
+  font-size: .68rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--faint); border: 1px solid var(--line); padding: .25rem .55rem; border-radius: 999px;
+}
+.hero-text { flex: 1; min-width: 12rem; color: var(--muted); font-size: .88rem; margin: 0; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+
+.empty-chat {
+  max-width: 34rem; margin: auto; padding: 2rem 1.25rem; text-align: center;
+}
+.empty-mark {
+  width: 56px; height: 56px; margin: 0 auto 1rem; border-radius: 16px;
+  background:
+    radial-gradient(circle at 30% 30%, #fff 0 16%, transparent 17%),
+    conic-gradient(from 210deg, #2a2a2e, #f4f4f6, #1a1a1e, #9a9aa3, #2a2a2e);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.empty-chat h2 { margin: 0 0 .5rem; font-size: 1.35rem; font-weight: 600; }
+.empty-chat p { color: var(--muted); margin: 0 0 1rem; line-height: 1.5; }
+.empty-hint { font-size: .82rem; color: var(--faint) !important; }
+.suggest-row {
+  display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin: 1rem 0;
+}
+.suggest-chip {
+  border: 1px solid var(--line); background: var(--bg-elev); color: var(--text);
+  border-radius: 999px; padding: .55rem .95rem; cursor: pointer; font-size: .88rem;
+}
+.suggest-chip:hover { background: var(--bg-hover); border-color: var(--accent-dim); }
+
+.attach-bar {
+  display: flex; flex-wrap: wrap; gap: .4rem; padding: .35rem 1rem 0;
+}
+.attach-chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  background: var(--bg-panel); border: 1px solid var(--line);
+  border-radius: 999px; padding: .25rem .55rem .25rem .75rem; font-size: .8rem; color: var(--muted);
+}
+.attach-chip button {
+  border: 0; background: transparent; color: var(--faint); cursor: pointer; font-size: 1rem;
+  min-width: 28px; min-height: 28px;
+}
+
+.msg-tools {
+  margin-top: .35rem; font-size: .75rem; color: var(--faint); font-family: var(--mono);
+}
+.msg-actions { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
+.chip {
+  font-size: .72rem; padding: .2rem .5rem; border-radius: 999px;
+  background: var(--bg-hover); color: var(--muted); border: 1px solid var(--line);
+}
+
+.onboard {
+  position: fixed; inset: 0; z-index: 80;
+  display: grid; place-items: center;
+  background: rgba(0,0,0,.72); padding: 1rem;
+}
+.onboard[hidden] { display: none !important; }
+.onboard-card {
+  width: min(440px, 100%);
+  background: var(--bg-elev); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1.35rem 1.4rem;
+  box-shadow: var(--shadow);
+}
+.onboard-card h2 { margin: 0 0 .75rem; font-size: 1.2rem; }
+.onboard-card p { color: var(--muted); line-height: 1.5; margin: 0 0 .65rem; font-size: .92rem; }
+.row-gap.wrap { flex-wrap: wrap; }
+.callout.security { margin-top: 1rem; }
+
+.settings-form small { display: block; color: var(--faint); margin-top: .35rem; line-height: 1.4; font-size: .78rem; }
+
+/* Contrast: muted text on dark stays ≥ ~4.5:1 for primary actions */
+.ghost-btn { color: var(--accent-dim); }
+.send-btn { background: var(--accent); color: #0a0a0b; font-weight: 600; }
+.send-btn.stop-mode { background: var(--danger); color: #fff; }
+
+@media (max-width: 820px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar {
+    position: fixed; inset: 0 auto 0 0; width: min(86vw, 300px);
+    transform: translateX(-105%); transition: transform .2s ease;
+    box-shadow: var(--shadow);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-only { display: inline-flex !important; }
+  .hero-strip { margin: .5rem .75rem 0; }
+  .composer { padding-bottom: env(safe-area-inset-bottom, 0); }
+  .messages { padding: .75rem; }
+  .topbar { padding-left: .5rem; padding-right: .5rem; }
+}
+.mobile-only { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

@@ -1,4 +1,5 @@
 import { t, getLang } from './i18n.js';
+import { getSettings } from './settings.js';
 
 let cache = null;
 let viewDate = null;
@@ -77,8 +78,11 @@ export function renderSchedulePanel() {
   const list = lessonsFor(dateStr);
   const now = moscowNow();
   document.getElementById('schedule-day-title').textContent = formatDayTitle(dateStr);
+  const grp = cache.group || getSettings().scheduleGroup || '221461';
   document.getElementById('schedule-meta').textContent =
-    `${cache.group || '221461'} · ${t('schedule.updated')}: ${formatUpdated(cache.updated_at)} · ${cache.lessons?.length || 0}`;
+    `${grp} · ${t('schedule.updated')}: ${formatUpdated(cache.updated_at)} · ${cache.lessons?.length || 0}`;
+  const glabel = document.getElementById('schedule-group-label');
+  if (glabel) glabel.textContent = grp;
 
   const el = document.getElementById('schedule-list');
   const empty = document.getElementById('schedule-empty');
@@ -124,8 +128,9 @@ function escape(s) {
 
 /** Try live TulSU JSON; usually fails due to CORS — then keep cache. */
 export async function tryLiveRefresh() {
+  const group = (getSettings().scheduleGroup || '221461').trim() || '221461';
   const urls = [
-    'https://tulsu.ru/schedule/queries/GetSchedule.php?search_field=GROUP_P&search_value=221461',
+    `https://tulsu.ru/schedule/queries/GetSchedule.php?search_field=GROUP_P&search_value=${encodeURIComponent(group)}`,
   ];
   for (const url of urls) {
     try {
@@ -143,8 +148,8 @@ export async function tryLiveRefresh() {
         teacher: x.PREP || '',
       })).filter((l) => l.date && l.subject);
       cache = {
-        group: '221461',
-        source: 'https://tulsu.ru/schedule/?group=221461',
+        group,
+        source: `https://tulsu.ru/schedule/?group=${encodeURIComponent(group)}`,
         updated_at: new Date().toISOString(),
         lessons,
         live: true,
@@ -166,7 +171,7 @@ function parseRuDate(s) {
 export function scheduleBlockForPrompt(days = 3) {
   if (!cache) return '## Schedule\n- (not loaded)';
   const start = moscowNow().date;
-  const lines = [`## University schedule (group ${cache.group || '221461'}, Europe/Moscow)`];
+  const lines = [`## University schedule (group ${cache.group || getSettings().scheduleGroup || '221461'}, Europe/Moscow)`];
   for (let i = 0; i < days; i++) {
     const d = new Date(start + 'T12:00:00');
     d.setDate(d.getDate() + i);

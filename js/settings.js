@@ -26,7 +26,6 @@ export const PROVIDERS = {
   },
 };
 
-/** Groq free-tier Llama IDs were retired 2026-08-16 — map them away. */
 export const RETIRED_MODEL_MAP = {
   'llama-3.3-70b-versatile': SMART_MODEL,
   'llama-3.1-8b-instant': FAST_MODEL,
@@ -75,6 +74,8 @@ const DEFAULTS = {
   contextMessages: 24,
   showLatency: true,
   maxTokens: 1024,
+  scheduleGroup: '221461',
+  onboardingDone: false,
 };
 
 function migrateSettings(raw) {
@@ -97,7 +98,6 @@ function migrateSettings(raw) {
     changed = true;
   }
 
-  // Old gemma preset id
   if (s.preset === 'gemma') {
     s.preset = 'fast';
     s.model = FAST_MODEL;
@@ -106,7 +106,11 @@ function migrateSettings(raw) {
     changed = true;
   }
 
-  // Align preset label with known models
+  if (!s.scheduleGroup) {
+    s.scheduleGroup = '221461';
+    changed = true;
+  }
+
   if (s.model === SMART_MODEL && s.provider === 'groq') s.preset = s.preset === 'custom' ? 'custom' : 'smart';
   if (s.model === FAST_MODEL && s.provider === 'groq' && s.preset === 'smart') s.preset = 'fast';
 
@@ -120,7 +124,6 @@ export function getSettings() {
 
 export function saveSettings(patch) {
   const next = migrateSettings({ ...getSettings(), ...patch });
-  // migrateSettings may have already saved if retired ids present; always persist patch result
   save('settings', next);
   return next;
 }
@@ -149,6 +152,16 @@ export function applyPreset(presetId) {
     baseUrl: p.baseUrl,
     model: p.model,
   };
+}
+
+/** Wipe all Shira localStorage keys (prefix shira.v1.). */
+export function wipeAllLocalData() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('shira.v1.')) keys.push(k);
+  }
+  keys.forEach((k) => localStorage.removeItem(k));
 }
 
 export function removeSettings() {

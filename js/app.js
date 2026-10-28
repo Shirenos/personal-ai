@@ -1,17 +1,22 @@
-import { setLang, t, getLang } from './i18n.js';
+import { setLang, t, getLang, syncDocumentMeta } from './i18n.js';
 import {
   getSettings, saveSettings, clearApiKey, hasApiKey,
-  applyProviderDefaults, applyPreset, MODEL_PRESETS,
+  applyProviderDefaults, applyPreset, wipeAllLocalData,
 } from './settings.js';
 import {
-  showWelcome, sendMessage, clearHistory, stopGeneration,
+  showWelcome, sendMessage, stopGeneration,
   regenerateLast, isStreaming, warmupConnection,
+  setPendingFiles, getPendingFiles,
 } from './chat.js';
+import {
+  listSessions, createSession, switchSession, deleteSession, getActiveSessionId,
+} from './sessions.js';
 import { getTasks, addTask, toggleTask, removeTask, openCount } from './tasks.js';
 import { getMemories, addMemory, removeMemory, getProfile } from './memory.js';
 import { loadSchedule, renderSchedulePanel, shiftDay, setToday, tryLiveRefresh } from './schedule.js';
-import { startListening, stopListening, isListening, speechSupported } from './voice.js';
+import { startListening, stopListening, isListening, speechSupported, speak, ttsSupported } from './voice.js';
 import { exportAll, importAll } from './storage.js';
+import { isSupportedFile } from './files.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,7 +25,7 @@ function setStatus(kind) {
   const text = $('api-status-text');
   if (!hasApiKey()) {
     dot.className = 'dot';
-    text.textContent = t('status.nokey');
+    text.textContent = t('status.demo');
     return;
   }
   if (kind === 'busy') {
@@ -52,6 +57,12 @@ function openPanel(name) {
   });
   $('panel-title').textContent = t('nav.' + name);
   closeSidebar();
+  if (name === 'chat') {
+    const hero = $('hero-strip');
+    if (hero && listSessions().some((s) => true)) {
+      /* keep hero until user dismisses via CTA */
+    }
+  }
   if (name === 'tasks') renderTasks();
   if (name === 'memory') renderMemory();
   if (name === 'schedule') renderSchedulePanel();
@@ -65,6 +76,40 @@ function openSidebar() {
 function closeSidebar() {
   $('sidebar').classList.remove('open');
   $('backdrop').hidden = true;
+}
+
+function renderSessions() {
+  const ul = $('session-list');
+  if (!ul) return;
+  const active = getActiveSessionId();
+  const sessions = listSessions().slice(0, 24);
+  ul.innerHTML = '';
+  for (const s of sessions) {
+    const li = document.createElement('li');
+    li.className = 'session-item' + (s.id === active ? ' active' : '');
+    li.innerHTML = `
+      <button type="button" class="session-btn tap" data-id="${s.id}">
+        <span class="session-title"></span>
+      </button>
+      <button type="button" class="session-del tap" data-del="${s.id}" aria-label="Delete">×</button>
+    `;
+    li.querySelector('.session-title').textContent = s.title || 'Chat';
+    li.querySelector('[data-id]').addEventListener('click', () => {
+      stopGeneration();
+      switchSession(s.id);
+      showWelcome();
+      renderSessions();
+      openPanel('chat');
+      setStreamingUi(false);
+    });
+    li.querySelector('[data-del]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteSession(s.id);
+      showWelcome();
+      renderSessions();
+    });
+    ul.appendChild(li);
+  }
 }
 
 function renderTasks() {
@@ -85,7 +130,7 @@ function renderTasks() {
     li.innerHTML = `
       <input type="checkbox" ${task.done ? 'checked' : ''} aria-label="done" />
       <div class="task-text"></div>
-      <button class="ghost-btn" type="button" data-del>✕</button>
+      <button class="ghost-btn tap" type="button" data-del aria-label="Delete">×</button>
     `;
     li.querySelector('.task-text').textContent = task.text;
     li.querySelector('input').addEventListener('change', () => {
@@ -120,7 +165,7 @@ function renderMemory() {
     li.className = 'memory-item';
     li.innerHTML = `
       <div class="memory-text"></div>
-      <button class="ghost-btn" type="button" data-del>✕</button>
+      <button class="ghost-btn tap" type="button" data-del aria-label="Delete">×</button>
     `;
     li.querySelector('.memory-text').textContent = m.text;
     li.querySelector('[data-del]').addEventListener('click', () => {
@@ -135,6 +180,7 @@ function fillSettingsForm() {
   const s = getSettings();
   $('set-name').value = s.name || 'Шира';
   $('set-lang').value = s.lang || 'ru';
+  $('set-group').value = s.scheduleGroup || '221461';
   $('set-preset').value = s.preset || 'smart';
   $('set-provider').value = s.provider || 'groq';
   $('set-base').value = s.baseUrl || '';
@@ -152,7 +198,7 @@ function fillSettingsForm() {
 function applyBrand() {
   const s = getSettings();
   $('brand-name').textContent = s.name || 'Шира';
-  document.title = `${s.name || 'Шира'} — Personal AI Assistant`;
+  syncDocumentMeta();
 }
 
 function autosize() {
@@ -161,13 +207,59 @@ function autosize() {
   ta.style.height = Math.min(160, ta.scrollHeight) + 'px';
 }
 
+function renderAttachBar() {
+  const bar = $('attach-bar');
+  const files = getPendingFiles();
+  if (!files.length) {
+    bar.hidden = true;
+    bar.innerHTML = '';
+    return;
+  }
+  bar.hidden = false;
+  bar.innerHTML = files.map((f, i) =>
+    `<span class="attach-chip">${escapeHtml(f.name)} <button type="button" data-rm="${i}" aria-label="Remove">×</button></span>`
+  ).join('');
+  bar.querySelectorAll('[data-rm]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.getAttribute('data-rm'));
+      const next = getPendingFiles().filter((_, i) => i !== idx);
+      setPendingFiles(next);
+      renderAttachBar();
+    });
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function dismissOnboard(markDone = true) {
+  $('onboard').hidden = true;
+  if (markDone) saveSettings({ onboardingDone: true });
+}
+
+function maybeShowOnboard() {
+  const s = getSettings();
+  if (!s.onboardingDone) {
+    $('onboard').hidden = false;
+  }
+}
+
 const chatHooks = () => ({
   onTasksChanged: renderTasks,
   onMemoryChanged: renderMemory,
-  onOpenPanel: openPanel,
-  onCompleteTask: (id) => { toggleTask(id); renderTasks(); },
-  onStatus: setStatus,
-  onStreamingChange: setStreamingUi,
+  onScheduleChanged: renderSchedulePanel,
+  onSessionsChanged: renderSessions,
+  onFilesCleared: () => { setPendingFiles([]); renderAttachBar(); },
+  onNeedKey: () => openPanel('settings'),
+  onStreamStart: () => { setStreamingUi(true); setStatus('busy'); },
+  onStreamEnd: () => { setStreamingUi(false); setStatus(hasApiKey() ? 'ready' : 'nokey'); },
+  onAssistantDone: (text) => {
+    const s = getSettings();
+    if (s.tts && ttsSupported()) {
+      speak(text, { lang: getLang() === 'ru' ? 'ru-RU' : 'en-US' });
+    }
+  },
 });
 
 async function boot() {
@@ -178,9 +270,19 @@ async function boot() {
   showWelcome();
   renderTasks();
   renderMemory();
+  renderSessions();
   setStatus(hasApiKey() ? 'ready' : 'nokey');
   setStreamingUi(false);
   warmupConnection();
+  maybeShowOnboard();
+
+  if (!speechSupported()) {
+    $('btn-mic').classList.add('disabled');
+    $('btn-mic').title = t('err.voice');
+  }
+  if (!ttsSupported()) {
+    $('btn-tts').classList.add('disabled');
+  }
 
   try {
     await loadSchedule();
@@ -202,17 +304,43 @@ async function boot() {
     applyBrand();
     $('panel-title').textContent = t('nav.' + (document.querySelector('.panel.active')?.dataset.panel || 'chat'));
     renderSchedulePanel();
+    showWelcome();
     setStatus(hasApiKey() ? 'ready' : 'nokey');
     if (!isStreaming()) setStreamingUi(false);
   });
 
   $('btn-new-chat').addEventListener('click', () => {
     stopGeneration();
-    clearHistory();
+    createSession();
     openPanel('chat');
     showWelcome();
+    renderSessions();
     setStreamingUi(false);
   });
+
+  $('btn-hero-chat')?.addEventListener('click', () => {
+    $('hero-strip').hidden = true;
+    openPanel('chat');
+    $('input').focus();
+  });
+  $('btn-hero-demo')?.addEventListener('click', () => {
+    $('hero-strip').hidden = true;
+    openPanel('chat');
+    $('input').value = '/help';
+    $('input').focus();
+  });
+
+  $('onboard-demo')?.addEventListener('click', () => {
+    dismissOnboard(true);
+    openPanel('chat');
+    $('input').value = 'что умеешь?';
+    $('input').focus();
+  });
+  $('onboard-settings')?.addEventListener('click', () => {
+    dismissOnboard(true);
+    openPanel('settings');
+  });
+  $('onboard-dismiss')?.addEventListener('click', () => dismissOnboard(true));
 
   $('btn-stop').addEventListener('click', () => stopGeneration());
   $('btn-regen').addEventListener('click', async () => {
@@ -227,10 +355,12 @@ async function boot() {
       return;
     }
     const text = $('input').value;
-    if (!text.trim()) return;
+    if (!text.trim() && !getPendingFiles().length) return;
     $('input').value = '';
     autosize();
+    $('hero-strip').hidden = true;
     await sendMessage(text, chatHooks());
+    renderSessions();
     setStatus(hasApiKey() ? 'ready' : 'nokey');
   };
   $('btn-send').addEventListener('click', sendOrStop);
@@ -243,8 +373,19 @@ async function boot() {
   });
   $('input').addEventListener('input', autosize);
 
-  if (!speechSupported()) $('btn-mic').style.opacity = '.35';
+  $('btn-attach').addEventListener('click', () => $('file-input').click());
+  $('file-input').addEventListener('change', () => {
+    const picked = [...($('file-input').files || [])].filter(isSupportedFile).slice(0, 4);
+    setPendingFiles([...(getPendingFiles() || []), ...picked].slice(0, 4));
+    $('file-input').value = '';
+    renderAttachBar();
+  });
+
   $('btn-mic').addEventListener('click', () => {
+    if (!speechSupported()) {
+      alert(t('err.voice'));
+      return;
+    }
     if (isListening()) {
       stopListening();
       $('btn-mic').classList.remove('listening');
@@ -252,17 +393,24 @@ async function boot() {
     }
     const ok = startListening({
       lang: getLang() === 'ru' ? 'ru-RU' : 'en-US',
-      onPartial: (t) => { $('input').value = t; autosize(); },
-      onFinal: (t) => { $('input').value = t; autosize(); },
+      onPartial: (txt) => { $('input').value = txt; autosize(); },
+      onFinal: (txt) => { $('input').value = txt; autosize(); },
       onEnd: () => $('btn-mic').classList.remove('listening'),
-      onError: () => $('btn-mic').classList.remove('listening'),
+      onError: () => {
+        $('btn-mic').classList.remove('listening');
+        alert(t('err.voice'));
+      },
     });
     if (ok) $('btn-mic').classList.add('listening');
   });
 
   $('btn-tts').addEventListener('click', () => {
-    const s = getSettings();
-    const next = !s.tts;
+    if (!ttsSupported()) {
+      alert(t('err.voice'));
+      return;
+    }
+    const cur = getSettings();
+    const next = !cur.tts;
     saveSettings({ tts: next });
     $('btn-tts').setAttribute('aria-pressed', next ? 'true' : 'false');
     $('set-tts').checked = next;
@@ -332,6 +480,7 @@ async function boot() {
     const next = saveSettings({
       name: $('set-name').value.trim() || 'Шира',
       lang: $('set-lang').value,
+      scheduleGroup: ($('set-group').value.trim() || '221461'),
       preset: $('set-preset').value,
       provider: $('set-provider').value,
       baseUrl: $('set-base').value.trim(),
@@ -346,11 +495,18 @@ async function boot() {
     applyBrand();
     fillSettingsForm();
     warmupConnection();
+    const glabel = $('schedule-group-label');
+    if (glabel) glabel.textContent = next.scheduleGroup;
     alert(t('settings.saved'));
   });
   $('btn-clear-key').addEventListener('click', () => {
     clearApiKey();
     fillSettingsForm();
+  });
+  $('btn-wipe').addEventListener('click', () => {
+    if (!confirm(t('settings.wipeConfirm'))) return;
+    wipeAllLocalData();
+    location.reload();
   });
 }
 

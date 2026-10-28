@@ -46,3 +46,4 @@ export function tasksBlockForPrompt() {
   if (!open.length) return '## Open tasks\n- (none)';
   return '## Open tasks\n' + open.map((t) => `- [${t.id}] ${t.text}`).join('\n');
 }
+export function listTasks() { return getTasks(); }

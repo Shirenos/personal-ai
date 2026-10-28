@@ -78,11 +78,12 @@ export function renderSchedulePanel() {
   const list = lessonsFor(dateStr);
   const now = moscowNow();
   document.getElementById('schedule-day-title').textContent = formatDayTitle(dateStr);
-  const grp = cache.group || getSettings().scheduleGroup || '221461';
+  const settingsGroup = String(getSettings().scheduleGroup || '').trim();
+  const grp = settingsGroup || cache.group || '—';
   document.getElementById('schedule-meta').textContent =
     `${grp} · ${t('schedule.updated')}: ${formatUpdated(cache.updated_at)} · ${cache.lessons?.length || 0}`;
   const glabel = document.getElementById('schedule-group-label');
-  if (glabel) glabel.textContent = grp;
+  if (glabel) glabel.textContent = settingsGroup || cache.group || '—';
 
   const el = document.getElementById('schedule-list');
   const empty = document.getElementById('schedule-empty');
@@ -128,7 +129,7 @@ function escape(s) {
 
 /** Try live TulSU JSON; usually fails due to CORS — then keep cache. */
 export async function tryLiveRefresh() {
-  const group = (getSettings().scheduleGroup || '221461').trim() || '221461';
+  const group = (getSettings().scheduleGroup || cache?.group || '221461').trim() || '221461';
   const urls = [
     `https://tulsu.ru/schedule/queries/GetSchedule.php?search_field=GROUP_P&search_value=${encodeURIComponent(group)}`,
   ];

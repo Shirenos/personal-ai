@@ -10,12 +10,19 @@ const STR = {
     'chat.send': 'Отправить',
     'chat.stop': 'Стоп',
     'chat.regen': 'Ещё раз',
+    'chat.regenAria': 'Перегенерировать последний ответ',
+    'aria.delete': 'Удалить',
+    'aria.done': 'Готово',
+    'aria.remove': 'Убрать',
+    'toast.importOk': 'Импорт выполнен',
+    'toast.importSettingsWarn': 'В бэкапе есть настройки (включая Base URL). Импортировать их? API-ключ из файла никогда не импортируется; текущий ключ сохранится. Если Base URL чужой — ключ уйдёт туда.',
+    'onboard.demoPrompt': 'что умеешь?',
     'chat.stopped': 'Остановлено',
     'chat.placeholder': 'Сообщение…  /task купить тетрадь',
     'chat.hint': 'Команды: /task · /remember · /schedule · /tomorrow · /clear · /help',
     'chat.cleared': 'Чат очищен.',
     'chat.running_tools': 'Выполняю инструменты…',
-    'chat.welcome': 'Я **Шира** — личный ассистент в браузере.',
+    'chat.welcome': 'Я **Ширениум** — личный ассистент в браузере.',
     'status.nokey': 'Демо · нужен ключ',
     'status.ready': 'Готова',
     'status.busy': 'Отвечаю…',
@@ -61,10 +68,10 @@ const STR = {
     'settings.latency': 'Показывать задержку (ms)',
     'settings.saved': 'Настройки сохранены.',
     'settings.group': 'Группа расписания (ТулГУ)',
-    'settings.groupHint': 'По умолчанию 221461. Можно сменить на свою группу или оставить и править data/schedule.json.',
+    'settings.groupHint': 'Оставьте пустым или укажите свою группу ТулГУ (пример кэша: 221461).',
     'settings.securityTitle': 'Безопасность',
-    'settings.metaNote': 'Язык UI: RU/EN. Title и meta description для GitHub SEO остаются на английском (намеренно) — UI переключается отдельно.',
-    'welcome.title': 'Привет, я Шира',
+    'settings.metaNote': '',
+    'welcome.title': 'Привет, я Ширениум',
     'welcome.body': 'Личный ИИ в браузере: чат, память, задачи, расписание, поиск и голос. Без ключа — демо; с Groq — полноценный агент.',
     'welcome.hint': 'Нажми подсказку или введи команду. Ключ → Настройки.',
     'empty.s1': 'Расписание на сегодня',
@@ -82,8 +89,8 @@ const STR = {
     'err.aborted': 'Остановлено',
     'err.files': 'Не удалось прочитать файл',
     'err.voice': 'Голосовой ввод недоступен в этом браузере (Safari/Firefox часто без Web Speech). Используй клавиатуру.',
-    'onboard.title': 'Добро пожаловать в Ширу',
-    'onboard.p1': 'Это статический сайт на GitHub Pages — **без своего бэкенда**.',
+    'onboard.title': 'Добро пожаловать в Ширениум',
+    'onboard.p1': 'Это статический сайт на GitHub Pages — без своего бэкенда.',
     'onboard.p2': 'API-ключ хранится только в localStorage и отправляется только на выбранный Base URL (Groq / OpenAI / …).',
     'onboard.p3': 'Ключ: console.groq.com/keys → вставь в Настройки → пресет Smart. Или сразу жми «Демо».',
     'onboard.demo': 'Продолжить в демо',
@@ -94,7 +101,7 @@ const STR = {
     'hero.demo': 'Демо без ключа',
     'sessions.title': 'Чаты',
     'attach.title': 'Прикрепить файл',
-    'doc.title': 'Shira — Personal AI Assistant',
+    'doc.title': 'Shirenium — Personal AI Assistant',
     'doc.desc': 'Browser-based personal AI: streaming chat, memory, tasks, university schedule, web tools and voice. API key stays in localStorage only.',
   },
   en: {
@@ -108,12 +115,19 @@ const STR = {
     'chat.send': 'Send',
     'chat.stop': 'Stop',
     'chat.regen': 'Retry',
+    'chat.regenAria': 'Regenerate last reply',
+    'aria.delete': 'Delete',
+    'aria.done': 'Done',
+    'aria.remove': 'Remove',
+    'toast.importOk': 'Import complete',
+    'toast.importSettingsWarn': 'This backup includes settings (including Base URL). Import them? The API key from the file is never imported; your current key is kept. A hostile Base URL would receive your key on the next request.',
+    'onboard.demoPrompt': 'what can you do?',
     'chat.stopped': 'Stopped',
     'chat.placeholder': 'Message…  /task buy a notebook',
     'chat.hint': 'Commands: /task · /remember · /schedule · /tomorrow · /clear · /help',
     'chat.cleared': 'Chat cleared.',
     'chat.running_tools': 'Running tools…',
-    'chat.welcome': 'I am **Shira** — a personal assistant in the browser.',
+    'chat.welcome': 'I am **Shirenium** — a personal assistant in the browser.',
     'status.nokey': 'Demo · key needed',
     'status.ready': 'Ready',
     'status.busy': 'Responding…',
@@ -159,10 +173,10 @@ const STR = {
     'settings.latency': 'Show latency (ms)',
     'settings.saved': 'Settings saved.',
     'settings.group': 'Schedule group (TulSU)',
-    'settings.groupHint': 'Default 221461. Change to your group or edit data/schedule.json.',
+    'settings.groupHint': 'Leave empty or set your TulSU group (shipped cache example: 221461).',
     'settings.securityTitle': 'Security',
-    'settings.metaNote': 'UI language: RU/EN. Document title & meta stay English for GitHub SEO (intentional); UI toggles separately.',
-    'welcome.title': 'Hi, I’m Shira',
+    'settings.metaNote': '',
+    'welcome.title': 'Hi, I’m Shirenium',
     'welcome.body': 'Personal AI in the browser: chat, memory, tasks, schedule, search and voice. No key → demo; with Groq → full agent.',
     'welcome.hint': 'Tap a suggestion or type a command. Key → Settings.',
     'empty.s1': 'Today’s schedule',
@@ -180,8 +194,8 @@ const STR = {
     'err.aborted': 'Aborted',
     'err.files': 'Could not read file',
     'err.voice': 'Voice input isn’t available in this browser (Safari/Firefox often lack Web Speech). Use the keyboard.',
-    'onboard.title': 'Welcome to Shira',
-    'onboard.p1': 'This is a static GitHub Pages site — **no backend of ours**.',
+    'onboard.title': 'Welcome to Shirenium',
+    'onboard.p1': 'This is a static GitHub Pages site — no backend of ours.',
     'onboard.p2': 'Your API key lives only in localStorage and is sent only to the Base URL you choose (Groq / OpenAI / …).',
     'onboard.p3': 'Get a key at console.groq.com/keys → paste in Settings → Smart preset. Or continue in Demo.',
     'onboard.demo': 'Continue in demo',
@@ -192,7 +206,7 @@ const STR = {
     'hero.demo': 'Demo without key',
     'sessions.title': 'Chats',
     'attach.title': 'Attach file',
-    'doc.title': 'Shira — Personal AI Assistant',
+    'doc.title': 'Shirenium — Personal AI Assistant',
     'doc.desc': 'Browser-based personal AI: streaming chat, memory, tasks, university schedule, web tools and voice. API key stays in localStorage only.',
   },
 };
@@ -201,7 +215,7 @@ let lang = 'ru';
 
 const META = {
   // Intentional: keep EN title/description for GitHub / OG SEO; UI language is separate.
-  title: 'Shira — Personal AI Assistant',
+  title: 'Shirenium — Personal AI Assistant',
   description:
     'Browser-based personal AI assistant with streaming chat, memory, tasks, university schedule, web tools and voice. Your API key stays in localStorage only.',
 };
@@ -231,6 +245,10 @@ export function setLang(l) {
   document.querySelectorAll('[data-i18n-html]').forEach((el) => {
     const k = el.getAttribute('data-i18n-html');
     if (STR[lang][k] != null) el.innerHTML = STR[lang][k];
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    const k = el.getAttribute('data-i18n-title');
+    if (STR[lang][k] != null) el.setAttribute('title', STR[lang][k]);
   });
   const btn = document.getElementById('btn-lang');
   if (btn) btn.textContent = lang.toUpperCase();

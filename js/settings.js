@@ -1,4 +1,4 @@
-import { load, save, remove } from './storage.js';
+import { load, save, remove, PREFIX } from './storage.js';
 
 export const SMART_MODEL = 'openai/gpt-oss-120b';
 export const FAST_MODEL = 'openai/gpt-oss-20b';
@@ -62,8 +62,11 @@ export const MODEL_PRESETS = [
   },
 ];
 
+const DEFAULT_NAME_RU = 'Ширениум';
+const DEFAULT_NAME_EN = 'Shirenium';
+
 const DEFAULTS = {
-  name: 'Шира',
+  name: DEFAULT_NAME_RU,
   lang: 'ru',
   provider: 'groq',
   baseUrl: PROVIDERS.groq.base,
@@ -74,13 +77,35 @@ const DEFAULTS = {
   contextMessages: 24,
   showLatency: true,
   maxTokens: 1024,
-  scheduleGroup: '221461',
+  // Empty for public visitors; owner sets their group in Settings. Cache still ships demo data.
+  scheduleGroup: '',
   onboardingDone: false,
 };
+
+export function defaultAssistantName(lang) {
+  return lang === 'en' ? DEFAULT_NAME_EN : DEFAULT_NAME_RU;
+}
+
+export function clampContextMessages(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return 24;
+  return Math.min(60, Math.max(6, Math.round(v)));
+}
+
+export function clampMaxTokens(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return 1024;
+  return Math.min(4096, Math.max(256, Math.round(v)));
+}
 
 function migrateSettings(raw) {
   const s = { ...DEFAULTS, ...(raw && typeof raw === 'object' ? raw : {}) };
   let changed = false;
+
+  if (s.name === 'Шира' || s.name === 'Shira') {
+    s.name = s.lang === 'en' ? DEFAULT_NAME_EN : DEFAULT_NAME_RU;
+    changed = true;
+  }
 
   if (RETIRED_MODEL_MAP[s.model]) {
     const next = RETIRED_MODEL_MAP[s.model];
@@ -106,8 +131,16 @@ function migrateSettings(raw) {
     changed = true;
   }
 
-  if (!s.scheduleGroup) {
-    s.scheduleGroup = '221461';
+  // Do not force a default schedule group — empty means "use cache / set later".
+
+  const ctx = clampContextMessages(s.contextMessages);
+  if (ctx !== s.contextMessages) {
+    s.contextMessages = ctx;
+    changed = true;
+  }
+  const mt = clampMaxTokens(s.maxTokens);
+  if (mt !== s.maxTokens) {
+    s.maxTokens = mt;
     changed = true;
   }
 
@@ -123,7 +156,17 @@ export function getSettings() {
 }
 
 export function saveSettings(patch) {
-  const next = migrateSettings({ ...getSettings(), ...patch });
+  const merged = { ...getSettings(), ...patch };
+  if (patch && 'contextMessages' in patch) {
+    merged.contextMessages = clampContextMessages(patch.contextMessages);
+  }
+  if (patch && 'maxTokens' in patch) {
+    merged.maxTokens = clampMaxTokens(patch.maxTokens);
+  }
+  if (patch && 'scheduleGroup' in patch) {
+    merged.scheduleGroup = String(patch.scheduleGroup || '').trim();
+  }
+  const next = migrateSettings(merged);
   save('settings', next);
   return next;
 }
@@ -154,12 +197,12 @@ export function applyPreset(presetId) {
   };
 }
 
-/** Wipe all Shira localStorage keys (prefix shira.v1.). */
+/** Wipe all Shirenium localStorage keys (legacy prefix shira.v1.). */
 export function wipeAllLocalData() {
   const keys = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && k.startsWith('shira.v1.')) keys.push(k);
+    if (k && k.startsWith(PREFIX)) keys.push(k);
   }
   keys.forEach((k) => localStorage.removeItem(k));
 }

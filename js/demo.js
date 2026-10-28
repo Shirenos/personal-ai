@@ -57,7 +57,7 @@ export function getDemoReply(userText) {
   }
 
   if (/умеешь|что ты|capabilities|what can|help|возможност/.test(q)) {
-    return (ru ? 'Я **Шира**. В демо доступны команды и локальные данные. С ключом:\n\n' : 'I am **Shira**. Demo covers commands + local data. With a key:\n\n') +
+    return (ru ? 'Я **Ширениум**. В демо доступны команды и локальные данные. С ключом:\n\n' : 'I am **Shirenium**. Demo covers commands + local data. With a key:\n\n') +
       featureTour().map((x) => `• ${x}`).join('\n') +
       (ru
         ? '\n\nКлюч хранится **только** в localStorage и уходит **только** на выбранный API base URL (не на наш сервер — его нет).'

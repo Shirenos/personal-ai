@@ -1,4 +1,4 @@
-# Shira — Personal AI Assistant
+# Shirenium — Personal AI Assistant
 
 A serious, browser-based personal AI for a portfolio: streaming chat, agent tool-loop (web / wiki / calc / reminders), multi-session memory, tasks, configurable TulSU schedule, file attachments, voice, and a **demo mode with no API key**.
 
@@ -10,12 +10,12 @@ A serious, browser-based personal AI for a portfolio: streaming chat, agent tool
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 <p align="center">
-  <img src="docs/screenshot-chat.svg" alt="Shira chat empty state with command suggestions" width="720" />
+  <img src="docs/screenshot-chat.svg" alt="Shirenium chat empty state with command suggestions" width="720" />
 </p>
 
 ## Why this exists
 
-Most “AI wrappers” are demos or SaaS. Shira is a **local-first shell**: polished graphite UI, real `localStorage` persistence, university schedule, and a system prompt that injects profile, memories, open tasks, and the next days of classes — plus an agent loop that can call web search and Wikipedia entirely in the browser.
+Most “AI wrappers” are demos or SaaS. Shirenium is a **local-first shell**: polished graphite UI, real `localStorage` persistence, university schedule, and a system prompt that injects profile, memories, open tasks, and the next days of classes — plus an agent loop that can call web search and Wikipedia entirely in the browser.
 
 ## Features
 
@@ -27,7 +27,7 @@ Most “AI wrappers” are demos or SaaS. Shira is a **local-first shell**: poli
 | **Sessions** | Multiple chats in `localStorage`; new / switch / delete |
 | **Memory** | Profile + notes; export/import JSON; injected into the system prompt |
 | **Tasks** | Panel + `/task …`; assistant can mutate via `actions` |
-| **Schedule** | TulSU cache; **configurable group id** (default `221461`); `/schedule` `/tomorrow` |
+| **Schedule** | TulSU cache; **configurable group id** (optional; shipped cache uses `221461` as an example); `/schedule` `/tomorrow` |
 | **Attachments** | txt / md / pdf / images (pdf.js CDN) |
 | **Voice** | Web Speech when available; graceful message on Safari/Firefox without it |
 | **Onboarding** | First-run modal: where to get a Groq key, localStorage disclosure, demo CTA |
@@ -58,12 +58,12 @@ js/
   files.js         txt/md/pdf/image → prompt text
   demo.js          no-key replies
   memory.js tasks.js schedule.js settings.js voice.js i18n.js markdown.js storage.js
-data/schedule.json cached TulSU timetable (default group 221461)
+data/schedule.json cached TulSU timetable (example group 221461)
 ```
 
 ## Schedule
 
-TulSU JSON is usually blocked in the browser (CORS). The app ships `data/schedule.json` and a GitHub Action refreshes it. In Settings you can change the **group id** (default `221461`); live Refresh uses that group when CORS allows.
+TulSU JSON is usually blocked in the browser (CORS). The app ships `data/schedule.json` and a GitHub Action refreshes it. In Settings you can set the **group id** (leave empty for the shipped cache example); live Refresh uses that group when CORS allows.
 
 ```bash
 node scripts/update-schedule.mjs

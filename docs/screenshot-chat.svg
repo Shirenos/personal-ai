@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Shira UI preview">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Shirenium UI preview">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0c0c0e"/>
@@ -9,7 +9,7 @@
   <rect x="0" y="0" width="280" height="720" fill="#0c0c0e" stroke="#1a1a1d"/>
   <circle cx="48" cy="48" r="16" fill="none" stroke="#e8e8ea" stroke-width="2"/>
   <circle cx="48" cy="48" r="4" fill="#e8e8ea"/>
-  <text x="76" y="44" fill="#ececef" font-family="IBM Plex Sans, system-ui, sans-serif" font-size="18" font-weight="600">Шира</text>
+  <text x="76" y="44" fill="#ececef" font-family="IBM Plex Sans, system-ui, sans-serif" font-size="18" font-weight="600">Ширениум</text>
   <text x="76" y="62" fill="#5c5c66" font-family="IBM Plex Sans, system-ui, sans-serif" font-size="10" letter-spacing="2">PERSONAL AI</text>
   <rect x="16" y="96" width="248" height="40" rx="10" fill="#121214" stroke="#242428"/>
   <text x="36" y="121" fill="#ececef" font-family="IBM Plex Sans, system-ui, sans-serif" font-size="14">◉  Чат</text>
@@ -30,7 +30,7 @@
 
   <circle cx="780" cy="280" r="28" fill="none" stroke="#e8e8ea" stroke-width="2"/>
   <circle cx="780" cy="280" r="6" fill="#e8e8ea"/>
-  <text x="640" y="340" text-anchor="middle" fill="#ececef" font-family="IBM Plex Sans, system-ui, sans-serif" font-size="28" font-weight="600">Привет, я Шира</text>
+  <text x="640" y="340" text-anchor="middle" fill="#ececef" font-family="IBM Plex Sans, system-ui, sans-serif" font-size="28" font-weight="600">Привет, я Ширениум</text>
   <text x="640" y="372" text-anchor="middle" fill="#8a8a93" font-family="IBM Plex Sans, system-ui, sans-serif" font-size="14">Личный ИИ в браузере · ключ только в localStorage</text>
 
   <rect x="420" y="400" width="180" height="40" rx="20" fill="#121214" stroke="#242428"/>

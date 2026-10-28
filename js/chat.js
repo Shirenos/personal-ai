@@ -137,7 +137,7 @@ export function appendMessage(role, content, { streaming: isStream = false, meta
   const el = document.createElement('article');
   el.className = `msg msg-${role}${isStream ? ' streaming' : ''}`;
   el.innerHTML = `
-    <div class="msg-role">${role === 'user' ? 'You' : (getSettings().name || 'Шира')}</div>
+    <div class="msg-role">${role === 'user' ? 'You' : (getSettings().name || 'Ширениум')}</div>
     <div class="msg-body">${role === 'assistant' ? renderMarkdown(content) : escapeHtml(content)}</div>
     ${toolNote ? `<div class="msg-tools">${escapeHtml(toolNote)}</div>` : ''}
     <div class="msg-meta">${meta || (isStream ? '…' : '')}</div>
@@ -267,7 +267,7 @@ ${taskLines}
 ${scheduleBlockForPrompt(4)}
 
 ## Capabilities
-- Chat, memory, tasks, university schedule (group ${s.scheduleGroup || '221461'})
+- Chat, memory, tasks, university schedule (group ${s.scheduleGroup || '(unset)'})
 - Slash commands the user may type: /task /remember /schedule /tomorrow /clear /help
 - Voice input/TTS when available in the browser
 - File attachments (txt/md/pdf/images) may be included in the user message
@@ -281,7 +281,7 @@ function apiHeaders(s) {
   };
   if (s.provider === 'openrouter') {
     h['HTTP-Referer'] = location.origin;
-    h['X-Title'] = s.name || 'Shira';
+    h['X-Title'] = s.name || 'Shirenium';
   }
   return h;
 }

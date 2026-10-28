@@ -2,11 +2,12 @@ import { setLang, t, getLang, syncDocumentMeta } from './i18n.js';
 import {
   getSettings, saveSettings, clearApiKey, hasApiKey,
   applyProviderDefaults, applyPreset, wipeAllLocalData,
+  defaultAssistantName, clampContextMessages, clampMaxTokens,
 } from './settings.js';
 import {
   showWelcome, sendMessage, stopGeneration,
   regenerateLast, isStreaming, warmupConnection,
-  setPendingFiles, getPendingFiles,
+  setPendingFiles, getPendingFiles, getHistory,
 } from './chat.js';
 import {
   listSessions, createSession, switchSession, deleteSession, getActiveSessionId,
@@ -19,6 +20,21 @@ import { exportAll, importAll } from './storage.js';
 import { isSupportedFile } from './files.js';
 
 const $ = (id) => document.getElementById(id);
+
+function toast(message, { error = false, ms = 3200 } = {}) {
+  const host = $('toast-host');
+  if (!host) {
+    console.warn(message);
+    return;
+  }
+  const el = document.createElement('div');
+  el.className = 'toast' + (error ? ' error' : '');
+  el.textContent = message;
+  host.appendChild(el);
+  setTimeout(() => {
+    el.remove();
+  }, ms);
+}
 
 function setStatus(kind) {
   const dot = $('api-dot');
@@ -37,13 +53,23 @@ function setStatus(kind) {
   }
 }
 
+function updateRegenVisibility() {
+  const btn = $('btn-regen');
+  if (!btn) return;
+  const chatActive = document.querySelector('.panel.active')?.dataset.panel === 'chat';
+  const hasAssistant = (getHistory() || []).some((m) => m.role === 'assistant');
+  btn.hidden = !chatActive || !hasAssistant || isStreaming();
+  btn.setAttribute('aria-label', t('chat.regenAria'));
+  btn.title = t('chat.regenAria');
+}
+
 function setStreamingUi(on) {
-  $('btn-stop').hidden = !on;
+  // Single stop control: send button toggles to Stop while streaming.
   $('btn-send').disabled = false;
   $('btn-send').textContent = on ? t('chat.stop') : t('chat.send');
   $('btn-send').classList.toggle('stop-mode', on);
   $('composer').classList.toggle('busy', on);
-  $('btn-regen').disabled = on;
+  updateRegenVisibility();
 }
 
 function openPanel(name) {
@@ -57,16 +83,11 @@ function openPanel(name) {
   });
   $('panel-title').textContent = t('nav.' + name);
   closeSidebar();
-  if (name === 'chat') {
-    const hero = $('hero-strip');
-    if (hero && listSessions().some((s) => true)) {
-      /* keep hero until user dismisses via CTA */
-    }
-  }
   if (name === 'tasks') renderTasks();
   if (name === 'memory') renderMemory();
   if (name === 'schedule') renderSchedulePanel();
   if (name === 'settings') fillSettingsForm();
+  updateRegenVisibility();
 }
 
 function openSidebar() {
@@ -87,27 +108,41 @@ function renderSessions() {
   for (const s of sessions) {
     const li = document.createElement('li');
     li.className = 'session-item' + (s.id === active ? ' active' : '');
-    li.innerHTML = `
-      <button type="button" class="session-btn tap" data-id="${s.id}">
-        <span class="session-title"></span>
-      </button>
-      <button type="button" class="session-del tap" data-del="${s.id}" aria-label="Delete">×</button>
-    `;
-    li.querySelector('.session-title').textContent = s.title || 'Chat';
-    li.querySelector('[data-id]').addEventListener('click', () => {
+
+    const openBtn = document.createElement('button');
+    openBtn.type = 'button';
+    openBtn.className = 'session-btn tap';
+    openBtn.dataset.id = s.id;
+    const title = document.createElement('span');
+    title.className = 'session-title';
+    title.textContent = s.title || 'Chat';
+    openBtn.appendChild(title);
+    openBtn.addEventListener('click', () => {
       stopGeneration();
       switchSession(s.id);
       showWelcome();
       renderSessions();
       openPanel('chat');
       setStreamingUi(false);
+      updateRegenVisibility();
     });
-    li.querySelector('[data-del]').addEventListener('click', (e) => {
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'session-del tap';
+    delBtn.dataset.del = s.id;
+    delBtn.setAttribute('aria-label', t('aria.delete'));
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       deleteSession(s.id);
       showWelcome();
       renderSessions();
+      updateRegenVisibility();
     });
+
+    li.appendChild(openBtn);
+    li.appendChild(delBtn);
     ul.appendChild(li);
   }
 }
@@ -127,20 +162,33 @@ function renderTasks() {
   for (const task of tasks) {
     const li = document.createElement('li');
     li.className = 'task-item' + (task.done ? ' done' : '');
-    li.innerHTML = `
-      <input type="checkbox" ${task.done ? 'checked' : ''} aria-label="done" />
-      <div class="task-text"></div>
-      <button class="ghost-btn tap" type="button" data-del aria-label="Delete">×</button>
-    `;
-    li.querySelector('.task-text').textContent = task.text;
-    li.querySelector('input').addEventListener('change', () => {
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!task.done;
+    cb.setAttribute('aria-label', t('aria.done'));
+    cb.addEventListener('change', () => {
       toggleTask(task.id);
       renderTasks();
     });
-    li.querySelector('[data-del]').addEventListener('click', () => {
+
+    const text = document.createElement('div');
+    text.className = 'task-text';
+    text.textContent = task.text;
+
+    const del = document.createElement('button');
+    del.className = 'ghost-btn tap';
+    del.type = 'button';
+    del.setAttribute('aria-label', t('aria.delete'));
+    del.textContent = '×';
+    del.addEventListener('click', () => {
       removeTask(task.id);
       renderTasks();
     });
+
+    li.appendChild(cb);
+    li.appendChild(text);
+    li.appendChild(del);
     list.appendChild(li);
   }
 }
@@ -153,8 +201,10 @@ function renderMemory() {
   for (const p of getProfile()) {
     const li = document.createElement('li');
     li.className = 'memory-item';
-    li.innerHTML = `<div class="memory-text"></div>`;
-    li.querySelector('.memory-text').textContent = p.text;
+    const text = document.createElement('div');
+    text.className = 'memory-text';
+    text.textContent = p.text;
+    li.appendChild(text);
     profileEl.appendChild(li);
   }
   const memories = getMemories();
@@ -163,41 +213,50 @@ function renderMemory() {
   for (const m of memories) {
     const li = document.createElement('li');
     li.className = 'memory-item';
-    li.innerHTML = `
-      <div class="memory-text"></div>
-      <button class="ghost-btn tap" type="button" data-del aria-label="Delete">×</button>
-    `;
-    li.querySelector('.memory-text').textContent = m.text;
-    li.querySelector('[data-del]').addEventListener('click', () => {
+    const text = document.createElement('div');
+    text.className = 'memory-text';
+    text.textContent = m.text;
+    const del = document.createElement('button');
+    del.className = 'ghost-btn tap';
+    del.type = 'button';
+    del.setAttribute('aria-label', t('aria.delete'));
+    del.textContent = '×';
+    del.addEventListener('click', () => {
       removeMemory(m.id);
       renderMemory();
     });
+    li.appendChild(text);
+    li.appendChild(del);
     memEl.appendChild(li);
   }
 }
 
 function fillSettingsForm() {
   const s = getSettings();
-  $('set-name').value = s.name || 'Шира';
+  $('set-name').value = s.name || defaultAssistantName(getLang());
   $('set-lang').value = s.lang || 'ru';
-  $('set-group').value = s.scheduleGroup || '221461';
+  $('set-group').value = s.scheduleGroup || '';
   $('set-preset').value = s.preset || 'smart';
   $('set-provider').value = s.provider || 'groq';
   $('set-base').value = s.baseUrl || '';
   $('set-model').value = s.model || '';
   $('set-key').value = s.apiKey || '';
+  $('set-key').type = 'password';
+  $('set-key').autocomplete = 'off';
   $('set-tts').checked = !!s.tts;
   $('set-latency').checked = s.showLatency !== false;
-  $('set-ctx').value = s.contextMessages || 24;
-  $('set-maxtok').value = s.maxTokens || 1024;
+  $('set-ctx').value = clampContextMessages(s.contextMessages || 24);
+  $('set-maxtok').value = clampMaxTokens(s.maxTokens || 1024);
   $('btn-tts').setAttribute('aria-pressed', s.tts ? 'true' : 'false');
   $('nokey-callout').hidden = hasApiKey();
   setStatus(hasApiKey() ? 'ready' : 'nokey');
+  const glabel = $('schedule-group-label');
+  if (glabel) glabel.textContent = s.scheduleGroup || '—';
 }
 
 function applyBrand() {
   const s = getSettings();
-  $('brand-name').textContent = s.name || 'Шира';
+  $('brand-name').textContent = s.name || defaultAssistantName(getLang());
   syncDocumentMeta();
 }
 
@@ -216,21 +275,25 @@ function renderAttachBar() {
     return;
   }
   bar.hidden = false;
-  bar.innerHTML = files.map((f, i) =>
-    `<span class="attach-chip">${escapeHtml(f.name)} <button type="button" data-rm="${i}" aria-label="Remove">×</button></span>`
-  ).join('');
-  bar.querySelectorAll('[data-rm]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const idx = Number(btn.getAttribute('data-rm'));
-      const next = getPendingFiles().filter((_, i) => i !== idx);
+  bar.innerHTML = '';
+  files.forEach((f, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'attach-chip';
+    chip.appendChild(document.createTextNode(f.name + ' '));
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.dataset.rm = String(i);
+    rm.setAttribute('aria-label', t('aria.remove'));
+    rm.textContent = '×';
+    rm.addEventListener('click', () => {
+      const idx = Number(rm.dataset.rm);
+      const next = getPendingFiles().filter((_, j) => j !== idx);
       setPendingFiles(next);
       renderAttachBar();
     });
+    chip.appendChild(rm);
+    bar.appendChild(chip);
   });
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function dismissOnboard(markDone = true) {
@@ -238,10 +301,45 @@ function dismissOnboard(markDone = true) {
   if (markDone) saveSettings({ onboardingDone: true });
 }
 
+function trapOnboardFocus() {
+  const root = $('onboard');
+  const card = root?.querySelector('.onboard-card');
+  if (!root || !card || root.hidden) return;
+  const focusables = () => [...card.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter((el) => !el.disabled && el.offsetParent !== null);
+  const list = focusables();
+  (list[0] || card).focus();
+  const onKey = (e) => {
+    if (root.hidden) {
+      document.removeEventListener('keydown', onKey, true);
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      dismissOnboard(true);
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const items = focusables();
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+  document.addEventListener('keydown', onKey, true);
+}
+
 function maybeShowOnboard() {
   const s = getSettings();
   if (!s.onboardingDone) {
     $('onboard').hidden = false;
+    trapOnboardFocus();
   }
 }
 
@@ -253,8 +351,13 @@ const chatHooks = () => ({
   onFilesCleared: () => { setPendingFiles([]); renderAttachBar(); },
   onNeedKey: () => openPanel('settings'),
   onStreamStart: () => { setStreamingUi(true); setStatus('busy'); },
-  onStreamEnd: () => { setStreamingUi(false); setStatus(hasApiKey() ? 'ready' : 'nokey'); },
+  onStreamEnd: () => {
+    setStreamingUi(false);
+    setStatus(hasApiKey() ? 'ready' : 'nokey');
+    updateRegenVisibility();
+  },
   onAssistantDone: (text) => {
+    updateRegenVisibility();
     const s = getSettings();
     if (s.tts && ttsSupported()) {
       speak(text, { lang: getLang() === 'ru' ? 'ru-RU' : 'en-US' });
@@ -273,6 +376,7 @@ async function boot() {
   renderSessions();
   setStatus(hasApiKey() ? 'ready' : 'nokey');
   setStreamingUi(false);
+  updateRegenVisibility();
   warmupConnection();
   maybeShowOnboard();
 
@@ -307,6 +411,7 @@ async function boot() {
     showWelcome();
     setStatus(hasApiKey() ? 'ready' : 'nokey');
     if (!isStreaming()) setStreamingUi(false);
+    updateRegenVisibility();
   });
 
   $('btn-new-chat').addEventListener('click', () => {
@@ -316,24 +421,13 @@ async function boot() {
     showWelcome();
     renderSessions();
     setStreamingUi(false);
-  });
-
-  $('btn-hero-chat')?.addEventListener('click', () => {
-    $('hero-strip').hidden = true;
-    openPanel('chat');
-    $('input').focus();
-  });
-  $('btn-hero-demo')?.addEventListener('click', () => {
-    $('hero-strip').hidden = true;
-    openPanel('chat');
-    $('input').value = '/help';
-    $('input').focus();
+    updateRegenVisibility();
   });
 
   $('onboard-demo')?.addEventListener('click', () => {
     dismissOnboard(true);
     openPanel('chat');
-    $('input').value = 'что умеешь?';
+    $('input').value = t('onboard.demoPrompt');
     $('input').focus();
   });
   $('onboard-settings')?.addEventListener('click', () => {
@@ -342,11 +436,11 @@ async function boot() {
   });
   $('onboard-dismiss')?.addEventListener('click', () => dismissOnboard(true));
 
-  $('btn-stop').addEventListener('click', () => stopGeneration());
   $('btn-regen').addEventListener('click', async () => {
     if (isStreaming()) return;
     openPanel('chat');
     await regenerateLast(chatHooks());
+    updateRegenVisibility();
   });
 
   const sendOrStop = async () => {
@@ -358,10 +452,10 @@ async function boot() {
     if (!text.trim() && !getPendingFiles().length) return;
     $('input').value = '';
     autosize();
-    $('hero-strip').hidden = true;
     await sendMessage(text, chatHooks());
     renderSessions();
     setStatus(hasApiKey() ? 'ready' : 'nokey');
+    updateRegenVisibility();
   };
   $('btn-send').addEventListener('click', sendOrStop);
   $('input').addEventListener('keydown', (e) => {
@@ -383,7 +477,7 @@ async function boot() {
 
   $('btn-mic').addEventListener('click', () => {
     if (!speechSupported()) {
-      alert(t('err.voice'));
+      toast(t('err.voice'), { error: true });
       return;
     }
     if (isListening()) {
@@ -398,7 +492,7 @@ async function boot() {
       onEnd: () => $('btn-mic').classList.remove('listening'),
       onError: () => {
         $('btn-mic').classList.remove('listening');
-        alert(t('err.voice'));
+        toast(t('err.voice'), { error: true });
       },
     });
     if (ok) $('btn-mic').classList.add('listening');
@@ -406,7 +500,7 @@ async function boot() {
 
   $('btn-tts').addEventListener('click', () => {
     if (!ttsSupported()) {
-      alert(t('err.voice'));
+      toast(t('err.voice'), { error: true });
       return;
     }
     const cur = getSettings();
@@ -433,19 +527,26 @@ async function boot() {
     const blob = new Blob([JSON.stringify(exportAll(), null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `shira-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `shirenium-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   });
   $('import-file').addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
     try {
       const data = JSON.parse(await file.text());
-      importAll(data);
-      location.reload();
+      const hasSettings = data?.data && Object.prototype.hasOwnProperty.call(data.data, 'settings');
+      let importSettings = false;
+      if (hasSettings) {
+        importSettings = confirm(t('toast.importSettingsWarn'));
+      }
+      importAll(data, { importSettings });
+      toast(t('toast.importOk'));
+      setTimeout(() => location.reload(), 400);
     } catch (err) {
-      alert(String(err.message || err));
+      toast(String(err.message || err), { error: true });
     }
   });
 
@@ -455,7 +556,7 @@ async function boot() {
   $('btn-sched-refresh').addEventListener('click', async () => {
     const r = await tryLiveRefresh();
     if (!r.ok) {
-      alert(t('schedule.cors'));
+      toast(t('schedule.cors'), { error: true });
       await loadSchedule();
     }
     renderSchedulePanel();
@@ -478,9 +579,9 @@ async function boot() {
   $('settings-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const next = saveSettings({
-      name: $('set-name').value.trim() || 'Шира',
+      name: $('set-name').value.trim() || defaultAssistantName($('set-lang').value),
       lang: $('set-lang').value,
-      scheduleGroup: ($('set-group').value.trim() || '221461'),
+      scheduleGroup: ($('set-group').value.trim() || ''),
       preset: $('set-preset').value,
       provider: $('set-provider').value,
       baseUrl: $('set-base').value.trim(),
@@ -488,16 +589,16 @@ async function boot() {
       apiKey: $('set-key').value.trim(),
       tts: $('set-tts').checked,
       showLatency: $('set-latency').checked,
-      contextMessages: Number($('set-ctx')?.value || 24),
-      maxTokens: Number($('set-maxtok')?.value || 1024),
+      contextMessages: clampContextMessages($('set-ctx')?.value || 24),
+      maxTokens: clampMaxTokens($('set-maxtok')?.value || 1024),
     });
     setLang(next.lang);
     applyBrand();
     fillSettingsForm();
     warmupConnection();
     const glabel = $('schedule-group-label');
-    if (glabel) glabel.textContent = next.scheduleGroup;
-    alert(t('settings.saved'));
+    if (glabel) glabel.textContent = next.scheduleGroup || '—';
+    toast(t('settings.saved'));
   });
   $('btn-clear-key').addEventListener('click', () => {
     clearApiKey();

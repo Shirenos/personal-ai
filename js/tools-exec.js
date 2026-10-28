@@ -164,7 +164,7 @@ export async function setReminder({ text, minutes = 5 } = {}) {
   }
   setTimeout(() => {
     try {
-      new Notification('Шира', { body, tag: 'shira-reminder-' + Date.now() });
+      new Notification('Shirenium', { body, tag: 'shirenium-reminder-' + Date.now() });
     } catch { /* ignore */ }
   }, ms);
   return { ok: true, text: body, minutes: Math.max(1, Number(minutes) || 5) };

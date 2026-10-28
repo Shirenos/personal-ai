@@ -6,6 +6,28 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+/** Strip leftover script/on* / javascript: from rendered HTML (defense in depth). */
+function sanitizeHtml(html) {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('script,iframe,object,embed,link,meta,style').forEach((n) => n.remove());
+  wrap.querySelectorAll('*').forEach((el) => {
+    [...el.attributes].forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      const val = String(attr.value || '');
+      if (name.startsWith('on') || name === 'srcdoc') {
+        el.removeAttribute(attr.name);
+        return;
+      }
+      if ((name === 'href' || name === 'src' || name === 'xlink:href') &&
+          /^\s*(javascript|data|vbscript):/i.test(val)) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return wrap.innerHTML;
+}
+
 export function renderMarkdown(src) {
   let text = String(src ?? '');
   const fences = [];
@@ -72,5 +94,7 @@ export function renderMarkdown(src) {
     }
   }
   closeLists();
-  return out.join('\n');
+  return sanitizeHtml(out.join('\n'));
 }
+
+export { escapeHtml, sanitizeHtml };

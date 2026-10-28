@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <!-- EN title/meta intentional for GitHub SEO; UI language toggles separately (see Settings note). -->
-  <title>Shira — Personal AI Assistant</title>
+  <title>Shirenium — Personal AI Assistant</title>
   <meta name="description" content="Browser-based personal AI assistant with streaming chat, memory, tasks, university schedule, web tools and voice. Your API key stays in localStorage only." />
   <meta name="theme-color" content="#0a0a0b" />
-  <meta property="og:title" content="Shira — Personal AI Assistant" />
+  <meta property="og:title" content="Shirenium — Personal AI Assistant" />
   <meta property="og:description" content="Browser-based personal AI: streaming chat, memory, tasks, schedule, web tools and voice. API key stays in localStorage only." />
   <meta property="og:type" content="website" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0a0b'/%3E%3Ccircle cx='32' cy='32' r='14' fill='none' stroke='%23e8e8ea' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='4' fill='%23e8e8ea'/%3E%3C/svg%3E" />
@@ -22,7 +22,7 @@
       <div class="brand">
         <div class="brand-mark" aria-hidden="true"></div>
         <div>
-          <div class="brand-name" id="brand-name">Шира</div>
+          <div class="brand-name" id="brand-name">Ширениум</div>
           <div class="brand-sub" data-i18n="brand.sub">Personal AI</div>
         </div>
       </div>
@@ -74,31 +74,25 @@
         </button>
         <h1 class="topbar-title" id="panel-title" data-i18n="nav.chat">Чат</h1>
         <div class="topbar-actions">
-          <button class="ghost-btn tap" id="btn-regen" type="button" data-i18n="chat.regen" title="Regenerate">↻</button>
-          <button class="ghost-btn danger tap" id="btn-stop" type="button" data-i18n="chat.stop" hidden>Stop</button>
+          <button class="ghost-btn tap regen-btn" id="btn-regen" type="button" hidden
+            aria-label="Перегенерировать последний ответ" title="Перегенерировать последний ответ">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 12a8 8 0 0113.65-5.65M20 4v5h-5"/><path d="M20 12a8 8 0 01-13.65 5.65M4 20v-5h5"/></svg>
+            <span data-i18n="chat.regen">Ещё раз</span>
+          </button>
           <button class="ghost-btn tap" id="btn-lang" type="button" title="Language">RU</button>
         </div>
       </header>
-
-      <div class="hero-strip" id="hero-strip">
-        <span class="hero-badge" data-i18n="hero.badge">Portfolio · browser-only</span>
-        <p class="hero-text">Streaming · memory · tasks · schedule · web tools · voice · localStorage-only key</p>
-        <div class="hero-actions">
-          <button type="button" class="send-btn tap" id="btn-hero-chat" data-i18n="hero.cta">Открыть чат</button>
-          <button type="button" class="ghost-btn tap" id="btn-hero-demo" data-i18n="hero.demo">Демо без ключа</button>
-        </div>
-      </div>
 
       <!-- CHAT -->
       <section class="panel active" id="panel-chat" data-panel="chat">
         <div class="messages" id="messages" role="log" aria-live="polite"></div>
         <div class="attach-bar" id="attach-bar" hidden></div>
         <div class="composer-wrap">
+          <input id="file-input" type="file" multiple accept=".txt,.md,.markdown,.csv,.json,.log,.js,.ts,.py,.html,.css,.pdf,image/*" hidden />
           <div class="composer" id="composer">
             <button class="icon-btn tap" id="btn-attach" type="button" data-i18n-title="attach.title" title="Прикрепить файл" aria-label="Attach">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 7l-6.5 6.5a2.5 2.5 0 103.5 3.5L18 11a4 4 0 10-5.7-5.7L6 11.7a5.5 5.5 0 107.8 7.8L20 14"/></svg>
             </button>
-            <input id="file-input" type="file" multiple accept=".txt,.md,.markdown,.csv,.json,.log,.js,.ts,.py,.html,.css,.pdf,image/*" hidden />
             <button class="icon-btn tap" id="btn-mic" type="button" title="Voice input" aria-label="Microphone">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
             </button>
@@ -128,7 +122,7 @@
       <section class="panel" id="panel-schedule" data-panel="schedule" hidden>
         <div class="panel-toolbar schedule-toolbar">
           <div>
-            <div class="eyebrow"><span data-i18n="schedule.group">Группа</span> <span id="schedule-group-label">221461</span> · ТулГУ</div>
+            <div class="eyebrow"><span data-i18n="schedule.group">Группа</span> <span id="schedule-group-label">—</span> · ТулГУ</div>
             <div class="meta" id="schedule-meta"></div>
           </div>
           <div class="row-gap">
@@ -178,7 +172,7 @@
         <form id="settings-form" class="settings-form">
           <label class="field">
             <span data-i18n="settings.name">Имя ассистента</span>
-            <input id="set-name" type="text" maxlength="40" value="Шира" />
+            <input id="set-name" type="text" maxlength="40" value="Ширениум" />
           </label>
 
           <label class="field">
@@ -187,13 +181,12 @@
               <option value="ru">Русский</option>
               <option value="en">English</option>
             </select>
-            <small data-i18n="settings.metaNote">Язык UI: RU/EN. Title и meta для GitHub SEO остаются на английском (намеренно).</small>
           </label>
 
           <label class="field">
             <span data-i18n="settings.group">Группа расписания (ТулГУ)</span>
-            <input id="set-group" type="text" maxlength="32" placeholder="221461" autocomplete="off" />
-            <small data-i18n="settings.groupHint">По умолчанию 221461. Можно сменить на свою группу.</small>
+            <input id="set-group" type="text" maxlength="32" placeholder="напр. 221461" autocomplete="off" />
+            <small data-i18n="settings.groupHint">Оставьте пустым или укажите свою группу ТулГУ (пример кэша: 221461).</small>
           </label>
 
           <label class="field">
@@ -279,9 +272,11 @@
 
   <div class="backdrop" id="backdrop" hidden></div>
 
+  <div class="toast-host" id="toast-host" aria-live="polite" aria-atomic="true"></div>
+
   <div class="onboard" id="onboard" hidden>
-    <div class="onboard-card" role="dialog" aria-modal="true" aria-labelledby="onboard-title">
-      <h2 id="onboard-title" data-i18n="onboard.title">Добро пожаловать в Ширу</h2>
+    <div class="onboard-card" role="dialog" aria-modal="true" aria-labelledby="onboard-title" tabindex="-1">
+      <h2 id="onboard-title" data-i18n="onboard.title">Добро пожаловать в Ширениум</h2>
       <p data-i18n="onboard.p1">Это статический сайт на GitHub Pages — без своего бэкенда.</p>
       <p data-i18n="onboard.p2">API-ключ хранится только в localStorage и отправляется только на выбранный Base URL.</p>
       <p data-i18n="onboard.p3">Ключ: console.groq.com/keys → Настройки → Smart. Или сразу демо.</p>
